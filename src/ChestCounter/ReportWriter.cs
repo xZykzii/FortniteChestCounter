@@ -968,7 +968,7 @@ public static class ReportWriter
         .stats{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #222938;padding-top:7px}
         .stat .cap{font-size:10px}.stat b{display:block;font-size:16px;font-weight:700}
         .stat.t b{color:#ff80aa}.stat small{display:block;font-size:11px;font-weight:600;color:#7a8496}
-        .box.hud{background:transparent;border:0;padding:0;border-radius:0;text-shadow:2px 2px 2px #000}.hud .head{display:none}.hud .main{display:block}.hud .total{flex-wrap:nowrap}.hud .total .cap{color:#ededed;font-size:24px;letter-spacing:normal;white-space:nowrap}.hud .chip{display:none}.hud .stats{border:0;background:transparent}.hud .stat{background:transparent}.hud .total img{width:48px;height:48px}
+        .box.hud{background:transparent;border:0;padding:0;border-radius:0;text-shadow:2px 2px 2px #000}.hud .head{display:none}.hud .main{display:block}.hud .total{flex-wrap:nowrap}.hud .total .cap{color:#ededed;margin-top:-6px;white-space:nowrap}.hud .chip{display:none}.hud .stats{border:0;background:transparent}.hud .stat{background:transparent}.hud .total img{width:48px;height:48px}
         .box .big,.box .cap,.box .head,.box .stat b{font-family:'Chest Overlay',"Segoe UI",sans-serif;font-weight:400}
         .box .head,.box .cap{text-transform:uppercase}
         """;

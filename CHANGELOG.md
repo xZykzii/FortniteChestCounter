@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.3.5
+
+- **COFRES** y **COFRES (SQUAD)** recuperan su tamaño anterior. El bloque de texto queda más cerca de la cifra en el HUD de Windows y OBS.
+
 ## 2.3.4
 
 - El HUD usa un tamaño intermedio para **COFRES** y **COFRES (SQUAD)**. El rótulo queda entre la cifra principal y las etiquetas de detalle, también en OBS.
