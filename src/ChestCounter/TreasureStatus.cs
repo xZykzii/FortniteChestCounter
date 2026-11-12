@@ -92,7 +92,7 @@ public static class TreasureStatus
         var rows = matches.SelectMany(m => Observations(m).Select(o => (Match: m, Find: o))).ToList();
         var tokens = rows.Where(r => r.Find.IsToken).ToList();
         sb.Append("<div class=\"callout\"><span class=\"ic\">★</span><div><b>Token de Tienda Pirata · ");
-        sb.Append(tokens.Count > 0 ? L.N(tokens.Count) + " detecciones" : "Sin detecciones");
+        sb.Append(tokens.Count > 0 ? L.Count(tokens.Count, "detección", "detecciones", "detection", "detections") : "Sin detecciones");
         sb.Append("</b><p>Se revisan los premios propios, del equipo y de otros jugadores registrados en tu replay. Los eventos lejanos y los premios desconocidos limitan la detección.</p></div></div>");
         sb.Append("<p class=\"sm\">Tu total de tesoros incluye ");
         sb.Append(isShared ? "premios propios y compartidos del equipo." : "tus premios propios.");
@@ -153,9 +153,9 @@ public static class TreasureStatus
 }
 
 /// <summary>A prize actor assembled from the incremental exports of its replay channel.</summary>
-public sealed record TreasurePrizeEvent(float Time, string? PrizeId, uint? Pawn, string Container, bool? Success)
+public sealed record TreasurePrizeEvent(float Time, string? PrizeId, uint? Pawn, string Container, bool? HasSucceeded)
 {
-    public bool HasPrize => PrizeId != null && Success != false;
+    public bool HasPrize => PrizeId != null && HasSucceeded != false;
 }
 
 /// <summary>
@@ -177,7 +177,7 @@ public sealed class TreasurePrizeLog
 
     public void ResetChannel(uint channel) => _byChannel.Remove(channel);
 
-    public void Record(uint channel, float time, string? id, uint? pawn, string container, bool? success)
+    public void Record(uint channel, float time, string? id, uint? pawn, string container, bool? hasSucceeded)
     {
         if (!float.IsFinite(time) || time < 0) return;
         id = string.IsNullOrWhiteSpace(id) ? null : id;
@@ -190,11 +190,11 @@ public sealed class TreasurePrizeLog
                 PrizeId = id ?? previous.PrizeId,
                 Pawn = pawn ?? previous.Pawn,
                 Container = string.IsNullOrEmpty(container) ? previous.Container : container,
-                Success = success ?? previous.Success,
+                HasSucceeded = hasSucceeded ?? previous.HasSucceeded,
             };
             return;
         }
         _byChannel[channel] = _events.Count;
-        _events.Add(new TreasurePrizeEvent(time, id, pawn, container, success));
+        _events.Add(new TreasurePrizeEvent(time, id, pawn, container, hasSucceeded));
     }
 }

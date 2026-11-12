@@ -119,7 +119,7 @@ internal static class TreasureChecks
         var adjusted = live.WithExtras([], false, true);
         var sb = new StringBuilder();
         TreasureStatus.AppendReport(sb, [adjusted], true);
-        check(sb.ToString().Contains("1 detecciones") && !sb.ToString().Contains("2 detecciones"), "Shared view does not duplicate token detections.");
+        check(sb.ToString().Contains("1 detección") && !sb.ToString().Contains("2 detecciones"), "Shared view does not duplicate token detections.");
         var newer = Fixture();
         newer.MatchStartUtc = old.MatchStartUtc!.Value.AddMinutes(1);
         check(!TreasureStatus.Current(null, [old, newer]).HasConfirmedToken, "Old tokens do not persist as last-match alerts.");
