@@ -81,12 +81,13 @@ internal static class SeasonChecks
     private static void Modes(Action<bool, string> check)
     {
         foreach (var playlist in new[] { "Playlist_DefaultSolo", "Playlist_DefaultDuo", "Playlist_NoBuildBR_Squad",
+            "Playlist_HabaneroSolo", "Playlist_HabaneroDuo", "Playlist_HabaneroSquad",
             "Playlist_Habanero_Solo", "Playlist_HabaneroBR_Duo", "Playlist_Habanero_NoBuildBR_Solo",
             "Playlist_Ranked_Squad", "Playlist_RankedBR_Trio", "Playlist_RankedNoBuildBR_Duo", "Playlist_NoBuildBR_Ranked_Solo",
             "/Game/Playlists/Playlist_HabaneroBR_Solo.Playlist_HabaneroBR_Solo" })
             check(GameModes.Counts(new MatchRecord { Playlist = playlist, Map = GameModes.SeasonMaps[0] }), "Regular seasonal BR is accepted.");
         foreach (var playlist in new[] { "Playlist_Figment_Solo", "Playlist_Reload_Squad", "Creative", "", "Playlist_DefaultSolo<script>",
-            "Playlist_HabaneroBR_Solo_LTM", "Playlist_Ranked_Creative", "Playlist_RankedNoBuildBR_Duo_LTM" })
+            "Playlist_HabaneroDuo_LTM", "Playlist_HabaneroBR_Solo_LTM", "Playlist_Ranked_Creative", "Playlist_RankedNoBuildBR_Duo_LTM" })
             check(!GameModes.Counts(new MatchRecord { Playlist = playlist }), "Non-event playlists are excluded from new tracking.");
         check(!GameModes.Counts(new MatchRecord { Playlist = "Playlist_DefaultSolo", IsCustomMatch = true }), "Custom matches are excluded.");
         var old = new MatchRecord { Playlist = "Playlist_Figment_Solo", ChestsOpened = 20, GameVersion = "v42.0", EpicId = "demo" };

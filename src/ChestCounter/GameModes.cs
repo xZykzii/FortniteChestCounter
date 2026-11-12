@@ -20,7 +20,7 @@ public static class GameModes
     /// </summary>
     private const string TEAM_NAMES = "Solo|Duo|Duos|Trio|Trios|Squad|Squads";
     private static readonly Regex BattleRoyalePlaylist = new(
-        $@"^Playlist_(Default({TEAM_NAMES})|Trios|NoBuildBR_({TEAM_NAMES})|(Habanero(BR|_NoBuildBR)?|Ranked(BR|NoBuildBR)?|NoBuildBR_Ranked)_({TEAM_NAMES}))$",
+        $@"^Playlist_(Default({TEAM_NAMES})|Trios|NoBuildBR_({TEAM_NAMES})|(Habanero(BR|_NoBuildBR)?_?|Ranked(BR|NoBuildBR)?_|NoBuildBR_Ranked_)({TEAM_NAMES}))$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static bool IsSeasonMap(string? map) => map != null && SeasonMaps.Any(m => map.Equals(m, StringComparison.OrdinalIgnoreCase));
