@@ -150,7 +150,7 @@ internal static class Branding
     }
 
     public static string ReportCss => """
-        :root{color-scheme:dark;--bg:#141415;--card:#19191b;--card2:#232325;--ink:#ededed;--muted:#a1a1a6;
+        :root,:root[data-theme="light"],:root:not([data-theme="dark"]){color-scheme:dark;--bg:#141415;--card:#19191b;--card2:#232325;--ink:#ededed;--muted:#a1a1a6;
           --faint:#85858b;--line:#303033;--cyan:#e3b461;--cyan-soft:rgba(227,180,97,.06);--amber:#e3b461;
           --mint:#97b7a1;--rose:#a1a1a6;--blue:#55555b;--line2:#303033;--shadow:none}
         html,body{background:#141415!important;color:#ededed!important;font-family:'Segoe UI Variable','Segoe UI',sans-serif}
