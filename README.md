@@ -2,7 +2,7 @@
 
 Contador de cofres para Windows con historial por perfil, informe de partidas, compañeros y overlay. Interfaz propia en grafito y dorado, con el cofre real de Fortnite.
 
-[**Descargar para Windows**](https://github.com/xZykzii/FortniteChestCounter/releases/latest) · [Twitch: xzykzii](https://www.twitch.tv/xzykzii)
+[**Descargar para Windows**](https://github.com/xZykzii/FortniteChestCounter/releases/latest)
 
 ![Ventana del contador con datos de ejemplo](docs/app.png)
 
@@ -75,4 +75,4 @@ El rediseño siguió las pautas de [unslop de Damir Sokolovsky](https://github.c
 
 Las marcas manuales de colección se guardan por perfil en el navegador, separadas del historial. Las probabilidades son estimaciones del catálogo original, no garantías; las franjas no confirmadas se muestran como previstas.
 
-Código bajo MIT; Barlow Condensed bajo OFL. El cofre de Fortnite y las marcas de Epic Games quedan fuera de la licencia MIT de este código. Proyecto independiente, sin afiliación ni respaldo de Epic Games. Más detalles en [CREDITS.md](CREDITS.md).
+Código bajo MIT; Anton bajo OFL. El cofre de Fortnite y las marcas de Epic Games quedan fuera de la licencia MIT de este código. Proyecto independiente, sin afiliación ni respaldo de Epic Games. Más detalles en [CREDITS.md](CREDITS.md).

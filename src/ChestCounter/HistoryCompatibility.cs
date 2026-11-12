@@ -179,7 +179,7 @@ public static class HistoryCompatibility
         foreach (var style in NativeOverlay.Styles)
         {
             var selected = style;
-            menu.Items.Add(style == "hud" ? "HUD transparente" : "Clásico · Barlow Condensed", null,
+            menu.Items.Add(style == "hud" ? "HUD transparente" : "Clásico", null,
                 (_, _) => monitor.SetOverlayStyle(selected));
         }
         overlay.ContextMenuStrip = menu;

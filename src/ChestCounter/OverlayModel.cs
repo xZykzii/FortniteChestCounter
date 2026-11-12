@@ -3,8 +3,11 @@ namespace ChestCounter;
 /// <summary>Construye lo que muestran la ventana, el overlay y la página OBS a partir de las partidas guardadas y la partida en curso.</summary>
 public static class OverlayModel
 {
-    /// <summary>Texto del contador derecho entre dos partidas (también sirve para mantener el ancho del overlay).</summary>
-    public static string TotalCaption(bool isTeam) => isTeam ? L.T("personal + equipo", "personal + team") : L.T("cofres personales", "personal chests");
+    /// <summary>Rótulo del total según el modo de conteo.</summary>
+    public static string TotalCaption(bool isTeam) =>
+        Upper(L.T("Cofres", "Chests")) + (isTeam ? " (SQUAD)" : "");
+
+    internal static string Upper(string text) => text.ToUpper(L.Culture);
 
     public static string LastMatchCaption => L.T("anterior", "previous");
 
@@ -64,10 +67,13 @@ public static class OverlayModel
 
 public static class OverlayAppearance
 {
-    public const string FontFamily = "Barlow Condensed";
+    public const string FontFamily = "Anton";
+    internal const string BurbankFamily = "Burbank Big Condensed";
+    internal const string BurbankBlack = "Burbank Big Condensed Black";
+    internal const string FontResource = "ChestCounter.Anton-Regular.ttf";
     internal static readonly Lazy<byte[]> Font = new(() =>
     {
-        using var source = typeof(OverlayAppearance).Assembly.GetManifestResourceStream("ChestCounter.BarlowCondensed-Bold.ttf")
+        using var source = typeof(OverlayAppearance).Assembly.GetManifestResourceStream(FontResource)
             ?? throw new InvalidOperationException("Missing overlay font resource.");
         using var copy = new MemoryStream();
         source.CopyTo(copy);

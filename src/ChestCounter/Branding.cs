@@ -10,8 +10,6 @@ namespace ChestCounter;
 /// <summary>Product assets and the inventory-inspired visual language. No remote assets at runtime.</summary>
 internal static class Branding
 {
-    public const string TWITCH_URL = "https://www.twitch.tv/xzykzii";
-    public const string TWITCH_NAME = "Twitch · xzykzii";
     private const int ICON_SIZE = 192;
     private const int ALPHA_THRESHOLD = 8;
     private static readonly Lazy<Bitmap> ChestImage = new(LoadChest);
@@ -109,16 +107,18 @@ internal static class Branding
         return button;
     }
 
-    public static LinkLabel Twitch(Control parent)
+    public static string RepositoryLabel => L.T("Repositorio en GitHub", "GitHub repository");
+
+    public static LinkLabel RepositoryLink(Control parent)
     {
         var link = new LinkLabel
         {
-            Text = TWITCH_NAME + " ↗", LinkColor = Theme.Muted, ActiveLinkColor = Theme.Gold,
+            Text = RepositoryLabel + " ↗", LinkColor = Theme.Muted, ActiveLinkColor = Theme.Gold,
             VisitedLinkColor = Theme.Muted, LinkBehavior = LinkBehavior.HoverUnderline,
             Font = Theme.Text(10), TextAlign = ContentAlignment.MiddleRight,
             BackColor = Color.Transparent, AutoSize = false, TabStop = true,
         };
-        link.LinkClicked += (_, _) => Open(TWITCH_URL);
+        link.LinkClicked += (_, _) => Open(AppInfo.RepoUrl);
         parent.Controls.Add(link);
         return link;
     }

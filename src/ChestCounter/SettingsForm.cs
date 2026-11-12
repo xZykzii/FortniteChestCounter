@@ -44,8 +44,8 @@ public sealed class SettingsForm : Form
         var close = Branding.Button(this, "Listo", Close, true);
         close.SetBounds(652, 616, 132, 40);
         CancelButton = close;
-        var twitch = Branding.Twitch(this);
-        twitch.SetBounds(24, 616, 216, 40);
+        var repository = Branding.RepositoryLink(this);
+        repository.SetBounds(24, 616, 216, 40);
     }
 
     private void BuildNavigation()
@@ -122,7 +122,7 @@ public sealed class SettingsForm : Form
         y = Toggle(page, "Bloquear posición", "Ctrl+Mayús+L; bloqueado deja pasar el ratón", y, _monitor.Config.OverlayLocked,
             value => { if (value != NativeOverlay.IsLocked) NativeOverlay.ToggleLock(); });
         y = Heading(page, "Aspecto", "El mismo cofre que enviaste, sin fondo", y + 20);
-        var style = Selector(page, "Estilo", y, new[] { new Choice("hud", "HUD transparente"), new Choice("classic", "Clásico · Barlow") }, _monitor.Config.OverlayStyle);
+        var style = Selector(page, "Estilo", y, new[] { new Choice("hud", "HUD transparente"), new Choice("classic", "Clásico") }, _monitor.Config.OverlayStyle);
         style.SelectedIndexChanged += (_, _) => { if (style.SelectedItem is Choice chosen) _monitor.SetOverlayStyle(chosen.Key); };
         y += ROW_HEIGHT;
         var size = Selector(page, "Tamaño", y, OverlayAppearance.Sizes.Select(n => new Choice(n.ToString(), n + " %")), _monitor.Config.OverlaySize.ToString());

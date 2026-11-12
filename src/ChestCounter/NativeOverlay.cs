@@ -296,19 +296,23 @@ public static class NativeOverlay
         }
         _scale = _dpiScale * _sizePercent / 100f;
         int S(int v) => (int)Math.Round(v * _scale);
-        var family = _fontResource == IntPtr.Zero ? "Segoe UI" : OverlayAppearance.FontFamily;
-        const int BOLD_WEIGHT = 700;
-        IntPtr CreateOverlayFont(int pixels) => CreateFontW(-S(pixels), 0, 0, 0, BOLD_WEIGHT, 0, 0, 0, 1, 0, 0, 5, 0, family);
+        using var installedFonts = new System.Drawing.Text.InstalledFontCollection();
+        var burbank = installedFonts.Families.FirstOrDefault(font =>
+            font.Name is OverlayAppearance.BurbankBlack or OverlayAppearance.BurbankFamily);
+        var family = burbank?.Name ?? (_fontResource == IntPtr.Zero ? "Segoe UI" : OverlayAppearance.FontFamily);
+        const int BLACK_WEIGHT = 900, REGULAR_WEIGHT = 400;
+        const uint GRAYSCALE_ANTIALIAS = 4;
+        var weight = burbank == null ? REGULAR_WEIGHT : BLACK_WEIGHT;
+        IntPtr CreateOverlayFont(int pixels) =>
+            CreateFontW(-S(pixels), 0, 0, 0, weight, 0, 0, 0, 1, 0, 0, GRAYSCALE_ANTIALIAS, 0, family);
         _fontBig = CreateOverlayFont(40);
         _fontSmall = CreateOverlayFont(15);
         _fontHeader = CreateOverlayFont(13);
         _fontCaption = CreateOverlayFont(13);
         _fontLabel = CreateOverlayFont(14);
         _fontIcon = CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe MDL2 Assets");
-        // Game-like styles: condensed italic, grayscale anti-aliasing (ClearType would leave colored edges once the
-        // background is made transparent).
-        _fontHudBig = CreateFontW(-S(36), 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 4, 0, "Bahnschrift");
-        _fontHudSmall = CreateFontW(-S(16), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 4, 0, "Segoe UI");
+        _fontHudBig = CreateOverlayFont(36);
+        _fontHudSmall = CreateOverlayFont(16);
     }
 
     private static bool Contains(RECT bounds, int x, int y) =>
@@ -492,7 +496,7 @@ public static class NativeOverlay
 
             // Two counters side by side.
             _col1W = Math.Max(TextWidth(hdc, _fontBig, v.Total, out _bigH), TextWidth(hdc, _fontCaption, v.TotalCaption, out _captionH));
-            _col2W = Math.Max(TextWidth(hdc, _fontBig, v.Current ?? "—", out _), Math.Max(TextWidth(hdc, _fontCaption, v.CurrentCaption, out _), TextWidth(hdc, _fontCaption, OverlayModel.LastMatchCaption, out _)));
+            _col2W = Math.Max(TextWidth(hdc, _fontBig, v.Current ?? "—", out _), Math.Max(TextWidth(hdc, _fontCaption, OverlayModel.Upper(v.CurrentCaption), out _), TextWidth(hdc, _fontCaption, OverlayModel.Upper(OverlayModel.LastMatchCaption), out _)));
             var countersW = _col1W + S(ColGap) + _col2W;
 
             // Detail rows: grey label column + value.
@@ -501,7 +505,7 @@ public static class NativeOverlay
             _rowH = 0;
             foreach (var row in v.Rows)
             {
-                _labelW = Math.Max(_labelW, TextWidth(hdc, _fontLabel, row.Label, out var lh));
+                _labelW = Math.Max(_labelW, TextWidth(hdc, _fontLabel, OverlayModel.Upper(row.Label), out var lh));
                 valueW = Math.Max(valueW, TextWidth(hdc, _fontSmall, row.Value, out var vh)
                     + (row.Detail != null ? S(6) + TextWidth(hdc, _fontCaption, row.Detail, out _) : 0));
                 _rowH = Math.Max(_rowH, Math.Max(lh, vh));
@@ -614,7 +618,7 @@ public static class NativeOverlay
             FillRect(hdc, ref sep, _brushLine);
             y += _bigH;
             Text(hdc, _fontCaption, _locked ? Rgb(150, 150, 162) : Rgb(242, 184, 75), v.TotalCaption, x, y, x + _col1W + S(4), y + _captionH);
-            Text(hdc, _fontCaption, Rgb(130, 130, 142), v.CurrentCaption, x2, y, right + S(4), y + _captionH);
+            Text(hdc, _fontCaption, Rgb(130, 130, 142), OverlayModel.Upper(v.CurrentCaption), x2, y, right + S(4), y + _captionH);
             y += _captionH + S(12);
 
             if (v.Rows.Count > 0)
@@ -624,7 +628,7 @@ public static class NativeOverlay
                 y += 1 + S(10);
                 foreach (var row in v.Rows)
                 {
-                    Text(hdc, _fontLabel, Rgb(130, 130, 142), row.Label, x, y, x + _labelW, y + _rowH);
+                    Text(hdc, _fontLabel, Rgb(130, 130, 142), OverlayModel.Upper(row.Label), x, y, x + _labelW, y + _rowH);
                     var vx = x + _labelW + S(12);
                     Text(hdc, _fontSmall, row.Treasure ? Rgb(196, 160, 255) : Rgb(226, 226, 232), row.Value, vx, y, right + S(4), y + _rowH);
                     if (row.Detail != null)
@@ -652,13 +656,13 @@ public static class NativeOverlay
     {
         if (v.CurrentLive && v.Current is { } cur && cur != "…")
         {
-            return new HudRow(L.T("En direct", "Live", "En directo"), cur, true);
+            return new HudRow(OverlayModel.Upper(L.T("En direct", "Live", "En directo")), cur, true);
         }
         if (v.CurrentLive)
         {
-            return new HudRow(L.T("En partie", "In a match", "En partida"), "", true); // figures readable only at the end
+            return new HudRow(OverlayModel.Upper(L.T("En partie", "In a match", "En partida")), "", true); // figures readable only at the end
         }
-        return new HudRow(L.T("Dernière", "Last", "Última"), v.Last ?? "—", false);
+        return new HudRow(OverlayModel.Upper(L.T("Dernière", "Last", "Última")), v.Last ?? "—", false);
     }
 
     private static int Sc(double v) => (int)Math.Round(v * _scale);
@@ -676,7 +680,7 @@ public static class NativeOverlay
             var lockW = Sc(22);
             var bigW = TextWidth(hdc, _fontHudBig, v.Total, out _hudBigH);
             var state = StateRow(v);
-            var sessionLabel = L.T("Session", "Session", "Sesión");
+            var sessionLabel = OverlayModel.Upper(L.T("Sesión", "Session"));
             var rowsW = new[]
             {
                 TextWidth(hdc, _fontHudSmall, v.TotalCaption, out _),
@@ -850,7 +854,7 @@ public static class NativeOverlay
             Disc(hdc, stateLeft - Sc(12), y + rowH / 2 - Sc(4), Sc(9), Rgb(255, 59, 48), ink, 1);
         }
         y += rowH + Sc(2);
-        LabelValue(hdc, L.T("Session", "Session", "Sesión"), v.Session, left, right, y, rowH, white);
+        LabelValue(hdc, OverlayModel.Upper(L.T("Sesión", "Session")), v.Session, left, right, y, rowH, white);
         y += rowH + Sc(2);
         var tw = TextWidth(hdc, _fontHudSmall, v.Treasures, out _);
         Outlined(hdc, _fontHudSmall, Rgb(237, 237, 237), v.Treasures, left, y, right, y + rowH, DT_RIGHT, thin: true);

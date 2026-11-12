@@ -7,7 +7,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>ChestCounter</AssemblyName>
     <RootNamespace>ChestCounter</RootNamespace>
-    <Version>2.3.0</Version>
+    <Version>2.3.2</Version>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- Single-file publish: the parser discovers its types by reflection, so no trimming. -->
     <PublishTrimmed>false</PublishTrimmed>
@@ -17,7 +17,8 @@
     <TieredPGO>true</TieredPGO>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Fonts\BarlowCondensed-Bold.ttf" LogicalName="ChestCounter.BarlowCondensed-Bold.ttf" />
+    <EmbeddedResource Include="Fonts\Anton-Regular.ttf" LogicalName="ChestCounter.Anton-Regular.ttf" />
+    <None Update="Fonts\OFL-Anton.txt" CopyToPublishDirectory="PreserveNewest" />
     <!-- Logos de redes para el pie de Ajustes (PNG en el propio ejecutable). -->
     <EmbeddedResource Include="Assets\chest.png" LogicalName="ChestCounter.Assets.chest.png" />
     <EmbeddedResource Include="..\..\content\content.json" LogicalName="content.json" />

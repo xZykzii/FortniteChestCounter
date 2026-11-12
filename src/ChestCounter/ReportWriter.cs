@@ -652,7 +652,7 @@ public static class ReportWriter
             <p>Prize names can be edited in <code>treasures.json</code>. This page refreshes by itself.</p></footer>
             </main></body></html>
             """);
-        sb.Append(footer.Replace("</footer>", $"<p><a href=\"{Branding.TWITCH_URL}\" target=\"_blank\" rel=\"noopener noreferrer\">{Branding.TWITCH_NAME} ↗</a></p></footer>")
+        sb.Append(footer.Replace("</footer>", $"<p><a href=\"{H(AppInfo.RepoUrl)}\" target=\"_blank\" rel=\"noopener noreferrer\">{H(Branding.RepositoryLabel)} ↗</a></p></footer>")
             .Replace("</main></body></html>", $"</main><script>{TabsScript}</script></body></html>"));
         return sb.ToString();
     }
@@ -936,7 +936,8 @@ public static class ReportWriter
         }
     }
 
-    private static readonly string OverlayFont = "@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;src:url(data:font/ttf;base64,"
+    private static readonly string OverlayFont = "@font-face{font-family:'Chest Overlay';font-style:normal;font-weight:400;"
+        + $"src:local('{OverlayAppearance.BurbankBlack}'),local('BurbankBigCondensed-Black'),url(data:font/ttf;base64,"
         + Convert.ToBase64String(OverlayAppearance.Font.Value) + ") format('truetype')}";
     private static string OverlayStyle => OverlayFont + """
         html,body{margin:0;background:transparent;color:#ededed;font:500 16px/1.25 "Segoe UI",system-ui,sans-serif}
@@ -957,8 +958,9 @@ public static class ReportWriter
         .stats{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #222938;padding-top:7px}
         .stat .cap{font-size:10px}.stat b{display:block;font-size:16px;font-weight:700}
         .stat.t b{color:#ff80aa}.stat small{display:block;font-size:11px;font-weight:600;color:#7a8496}
-        .box.hud{background:transparent;border:0;padding:0;border-radius:0;text-shadow:2px 2px 2px #000}.hud .head{display:none}.hud .main{display:block}.hud .total{flex-wrap:nowrap}.hud .total .cap{display:none}.hud .chip{display:none}.hud .stats{border:0;background:transparent}.hud .stat{background:transparent}.hud .total img{width:48px;height:48px}
-        .big,.stat b{font-family:'Barlow Condensed',sans-serif;font-weight:700}
+        .box.hud{background:transparent;border:0;padding:0;border-radius:0;text-shadow:2px 2px 2px #000}.hud .head{display:none}.hud .main{display:block}.hud .total{flex-wrap:nowrap}.hud .total .cap{color:#ededed}.hud .chip{display:none}.hud .stats{border:0;background:transparent}.hud .stat{background:transparent}.hud .total img{width:48px;height:48px}
+        .box .big,.box .cap,.box .head,.box .stat b{font-family:'Chest Overlay',"Segoe UI",sans-serif;font-weight:400}
+        .box .head,.box .cap{text-transform:uppercase}
         """;
 
     /// <summary>The overlay card (shared by overlay.html and the OBS page served by the tool).</summary>

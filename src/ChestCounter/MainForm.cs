@@ -82,7 +82,7 @@ public sealed class MainForm : Form
         var hero = Branding.Section(split);
         split.SetCellPosition(hero, new TableLayoutPanelCellPosition(0, 0));
         hero.Margin = new Padding(0, 0, 16, 16);
-        var caption = TextAt(hero, "Cofres personales", 11, 24, 16, 320, 24, Theme.Muted);
+        var caption = TextAt(hero, OverlayModel.TotalCaption(_monitor.Config.CountTeammateChests), 11, 24, 16, 320, 24, Theme.Muted);
         var total = TextAt(hero, "0", 44, 20, 40, 320, 76, Theme.Gold);
         var external = TextAt(hero, "", 9, 24, 120, 360, 24, Theme.Muted);
         var art = new PictureBox { Image = Branding.Chest, SizeMode = PictureBoxSizeMode.Zoom,
@@ -172,9 +172,9 @@ public sealed class MainForm : Form
         overlay.SetBounds(160, 8, 120, 40);
         var settings = Branding.Button(footer, "Ajustes", () => { using var dialog = new SettingsForm(_monitor, _store); dialog.ShowDialog(this); });
         settings.SetBounds(288, 8, 112, 40);
-        var twitch = Branding.Twitch(footer);
-        twitch.SetBounds(648, 8, 200, 40);
-        footer.Resize += (_, _) => twitch.Left = footer.Width - twitch.Width;
+        var repository = Branding.RepositoryLink(footer);
+        repository.SetBounds(648, 8, 200, 40);
+        footer.Resize += (_, _) => repository.Left = footer.Width - repository.Width;
         return overlay;
     }
 
@@ -207,7 +207,7 @@ public sealed class MainForm : Form
         if (IsDisposed) return;
         var isTeam = _monitor.Config.CountTeammateChests;
         _total.Text = state.View.Total;
-        _caption.Text = isTeam ? "Personal + equipo observado" : "Cofres personales";
+        _caption.Text = state.View.TotalCaption;
         var reported = _monitor.ReportedTotals;
         _external.Text = reported.Matches > 0 ? $"Incluye {L.N(reported.Chests)} cofres de tu otro PC" : "Historial guardado en este PC";
         _current.Text = state.View.Current ?? "—";

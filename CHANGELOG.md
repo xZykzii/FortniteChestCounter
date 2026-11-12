@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.3.2
+
+- Enlace al repositorio de GitHub en la ventana, Ajustes y el informe.
+- Incluye la actualización del overlay 2.3.1 con **COFRES** y **COFRES (SQUAD)**, rótulos en mayúsculas y Anton como alternativa integrada a Burbank instalada.
+
 ## 2.3.0
 
 - Selector de perfil dibujado para la interfaz grafito/dorado: nombre, partidas y menú oscuro con teclado.
@@ -11,7 +16,7 @@
 - Estimación opcional desde Carrera: descuenta partidas de otro PC y mantiene la estimación separada de las aperturas verificadas.
 - OBS respeta el estilo HUD/clásico seleccionado.
 
-La interfaz nativa propia, el cofre y Twitch se mantienen. No se adopta la ventana WebView2 del proyecto oficial: la interfaz personalizada ya cubre ventana, ajustes, informe y overlay sin añadir ese runtime. La desinstalación se documenta en Ayuda; esta edición portable no añade un instalador que pueda borrar el historial.
+Se mantienen la interfaz nativa propia y el cofre. No se adopta la ventana WebView2 del proyecto oficial: la interfaz personalizada ya cubre ventana, ajustes, informe y overlay sin añadir ese runtime. La desinstalación se documenta en Ayuda; esta edición portable no añade un instalador que pueda borrar el historial.
 
 No se fuerza el reanálisis de partidas anteriores. La referencia local pasó de 77 a 79 cofres al recuperar dos destrucciones; el historial instalado conserva sus cifras. La atribución por proximidad y los avisos de vehículo tienen las limitaciones de lo grabado en el replay. Una partida nueva completa en Fortnite sigue siendo la validación pendiente del ciclo real.
 
@@ -19,4 +24,4 @@ Verificación: pruebas sintéticas y preservación de una copia real; ventana, s
 
 ## 2.2.0
 
-Interfaz nativa propia inspirada en las pautas de unslop, cofre con transparencia, HUD y estilo clásico, y enlace exclusivo a Twitch.
+Interfaz nativa propia inspirada en las pautas de unslop, cofre con transparencia, HUD y estilo clásico.
