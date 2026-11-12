@@ -15,6 +15,7 @@ public sealed class TeamChestCount
 
 public sealed class SeenPrize
 {
+    public string Evidence { get; set; } = "golden-prize";
     public string Player { get; set; } = "";
     public string PrizeId { get; set; } = "";
     public float TimeSeconds { get; set; }

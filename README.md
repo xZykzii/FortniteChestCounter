@@ -12,6 +12,8 @@ Contador de cofres para Windows con historial por perfil, informe de partidas, c
 - Selector de perfiles propio: botón oscuro, nombre, partidas y menú accesible con teclado.
 - Historial por cuenta, estadísticas diarias, media, récords, eliminaciones y tesoros.
 - Informe con pestañas y ranking de compañeros. Los cofres del equipo son un mínimo parcial según lo que contiene tu replay.
+- Opción independiente para sumar tesoros compartidos. Estado del token pirata con destinatarios detectados y desglose de premios propios, del equipo y de otros jugadores observados.
+- Ajustes redimensionables y maximizables.
 - HUD transparente y overlay clásico; el cofre tiene transparencia real. Ctrl+Mayús+O muestra/oculta y Ctrl+Mayús+L bloquea la posición.
 - Overlay para OBS en `http://localhost:7373/` mientras el contador está abierto.
 - Compatibilidad con los historiales antiguos de ambas bases y registros manuales de otro PC, conservando los conteos personales.
@@ -69,7 +71,7 @@ Usa una carpeta de prueba nueva. Las comprobaciones verifican preservación de c
 
 ## Procedencia y licencias
 
-Esta edición integra y modifica dos proyectos: [LED-N/Fortnite-ChestCounter v1.5.0](https://github.com/LED-N/Fortnite-ChestCounter/tree/v1.5.0) y [xdoofy92/ChestCounter v2.0.24](https://github.com/xdoofy92/ChestCounter/tree/v2.0.24). El analizador se basa en [FortniteReplayDecompressor de Shiqan](https://github.com/Shiqan/FortniteReplayDecompressor).
+Esta edición integra y modifica dos proyectos: [LED-N/Fortnite-ChestCounter v1.5.0](https://github.com/LED-N/Fortnite-ChestCounter/tree/v1.5.0) y [xdoofy92/ChestCounter v2.0.25](https://github.com/xdoofy92/ChestCounter/tree/v2.0.25). El analizador se basa en [FortniteReplayDecompressor de Shiqan](https://github.com/Shiqan/FortniteReplayDecompressor).
 
 El rediseño siguió las pautas de [unslop de Damir Sokolovsky](https://github.com/heydamir/unslop), licenciadas bajo CC BY 4.0. Se aplicaron espaciado consistente, superficies neutras, un único acento, tipografía legible y contenido visual del producto.
 

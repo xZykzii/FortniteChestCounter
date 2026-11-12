@@ -578,6 +578,7 @@ public static class ReportWriter
 
         // ================================ Tesoros ================================
         sb.Append("""<div class="panel" id="t-tesoros" role="tabpanel" aria-labelledby="tab-tesoros">""");
+        TreasureStatus.AppendReport(sb, matches, config.CountTeammateTreasures);
         if (treasureRows.Count > 0)
         {
             var unusual = treasureRows.Where(r => !r.f.SourceIsChest).ToList();
@@ -618,6 +619,7 @@ public static class ReportWriter
                 var id = f.PrizeId != null ? $"<div class=\"sm\">{H(f.PrizeId)}</div>" : (f.RawItem.StartsWith("WID_") ? $"<div class=\"sm\">{H(f.RawItem)}</div>" : "");
                 var when = f.ObtainedAtSeconds is float t ? (f.TimeExact ? Pretty.Clock(t) : $"<span class=\"sm\">{L.T("hacia", "around")}</span> {Pretty.Clock(t)}") : "<span class=\"muted\">—</span>";
                 var source = $"{(f.SourceIsChest ? "" : "⚑ ")}{H(f.SourceLabel)}"
+                    + (f.Teammate != null ? $"<div class=\"sm\">Equipo · {H(f.Teammate)}</div>" : "")
                     + (f.SourceCertain ? "" : $" <span class=\"sm\">({Pretty.Likely})</span>")
                     + (!f.SourceIsChest && !string.IsNullOrEmpty(f.SourceBlueprint) ? $"<div class=\"sm\">{H(f.SourceBlueprint)}</div>" : "")
                     + (f.AlsoPossible.Count > 0 ? $"<div class=\"sm\">{L.T("también posible: ", "also possible: ")}{H(string.Join(", ", f.AlsoPossible.Select(L.Name)))}</div>" : "");
@@ -743,9 +745,9 @@ public static class ReportWriter
         string Initial(string name) => H(name.Trim().Length > 0 ? char.ToUpperInvariant(name.Trim()[0]).ToString() : "?");
         string Pct(int part, int whole) => whole > 0 ? (100.0 * part / whole).ToString("0", Loc) + " %" : "—";
         sb.Append($"""
-            <div class="callout"><span class="ic">i</span><div>{L.Big("teammatesNote",
-                "Los cofres de tus compañeros no son exactos: salen de tu replay, y Fortnite solo graba lo que pasa a menos de 1.087 m de ti. Si un compañero se aleja más, sus cofres no se cuentan. Son un mínimo, no su total. «Tus cofres» son los tuyos en esas mismas partidas, para comparar.",
-                "Your teammates' chests are not exact: they come from your replay, and Fortnite only records what happens within 1,087 m of you. If a teammate goes further, their chests are not counted. They are a minimum, not their total. \"Your chests\" are yours in those same matches, for comparison.")}</div></div>
+            <div class="callout"><span class="ic">i</span><div>{L.Big("teammatesNoteObserved",
+                "Los cofres de tus compañeros son un mínimo de aperturas registradas en tu replay. La cobertura depende de los eventos que Fortnite envió al grabador. «Tus cofres» son los tuyos en esas mismas partidas, para comparar.",
+                "Your teammates' chests are a minimum of openings recorded in your replay. Coverage depends on the events Fortnite sent to the recorder. Your chests are yours in those same matches, for comparison.")}</div></div>
             """);
         if (all.Count == 0)
         {

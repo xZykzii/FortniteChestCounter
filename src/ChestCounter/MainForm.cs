@@ -8,12 +8,13 @@ public sealed class MainForm : Form
 {
     private const int TEAM_HEIGHT = 116;
     private const int TEAM_COLUMNS = 4;
+    private const int TOKEN_HEIGHT = 64;
     private readonly Monitor _monitor;
     private readonly Store _store;
     private readonly TableLayoutPanel _page = new();
     private readonly Label _total, _caption, _external, _current, _currentCaption, _session;
     private readonly Label _matches, _average, _best, _treasures, _chartNote, _result, _today, _notice;
-    private readonly Label _teamTitle, _teamTotal;
+    private readonly Label _teamTitle, _teamTotal, _token;
     private readonly Label[] _names = new Label[TEAM_COLUMNS], _counts = new Label[TEAM_COLUMNS];
     private readonly ProfileSelector _profiles;
     private readonly PillButton _mode, _overlay;
@@ -31,8 +32,8 @@ public sealed class MainForm : Form
         Font = Theme.Text(10);
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96, 96);
-        ClientSize = new Size(896, 724);
-        MinimumSize = new Size(912, 764);
+        ClientSize = new Size(896, 724 + TOKEN_HEIGHT);
+        MinimumSize = new Size(912, 764 + TOKEN_HEIGHT);
         StartPosition = FormStartPosition.CenterScreen;
         BuildPage();
         _profiles = BuildHeader();
@@ -40,6 +41,7 @@ public sealed class MainForm : Form
         (_matches, _average, _best, _treasures) = BuildMetrics();
         (_chart, _chartNote, _result, _today, _notice) = BuildActivity();
         (_team, _teamTitle, _teamTotal) = BuildTeam();
+        _token = BuildToken();
         _overlay = BuildFooter();
         HistoryCompatibility.ConfigureWindow(this, monitor, _total, _caption, _overlay);
         monitor.Changed += OnChanged;
@@ -52,10 +54,11 @@ public sealed class MainForm : Form
         _page.Dock = DockStyle.Fill;
         _page.Padding = new Padding(24);
         _page.ColumnCount = 1;
-        _page.RowCount = 6;
+        _page.RowCount = 7;
         foreach (var height in new[] { 60, 176, 92 }) _page.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
         _page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         _page.RowStyles.Add(new RowStyle(SizeType.Absolute, TEAM_HEIGHT));
+        _page.RowStyles.Add(new RowStyle(SizeType.Absolute, TOKEN_HEIGHT));
         _page.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         Controls.Add(_page);
     }
@@ -165,7 +168,7 @@ public sealed class MainForm : Form
     private PillButton BuildFooter()
     {
         var footer = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
-        _page.Controls.Add(footer, 0, 5);
+        _page.Controls.Add(footer, 0, 6);
         var report = Branding.Button(footer, "Abrir informe", () => Branding.Open(_store.ReportPath), true);
         report.SetBounds(0, 8, 152, 40);
         var overlay = Branding.Button(footer, "Overlay", _monitor.ToggleOverlay);
@@ -176,6 +179,19 @@ public sealed class MainForm : Form
         repository.SetBounds(648, 8, 200, 40);
         footer.Resize += (_, _) => repository.Left = footer.Width - repository.Width;
         return overlay;
+    }
+
+    private Label BuildToken()
+    {
+        var card = Branding.Section(_page, Padding.Empty);
+        _page.SetCellPosition(card, new TableLayoutPanelCellPosition(0, 5));
+        var token = Branding.Label(card, TokenStatus.Empty.Text, 10, Theme.Muted);
+        token.Dock = DockStyle.Fill;
+        token.TextAlign = ContentAlignment.MiddleLeft;
+        token.Padding = new Padding(16, 4, 16, 4);
+        token.Cursor = Cursors.Hand;
+        token.Click += (_, _) => Branding.Open(new Uri(_store.ReportPath).AbsoluteUri + "#tesoros");
+        return token;
     }
 
     private static Label TextAt(Control parent, string text, float size, int x, int y, int width, int height, Color? color = null)
@@ -225,6 +241,8 @@ public sealed class MainForm : Form
         _chart.SetDays(state.Stats.LastDays);
         _result.Text = state.Stats.LastMatch is { } last ? Result(last, isTeam) : "Todavía no hay partidas";
         _notice.Text = state.AutoCloseOffer ? "Mantener el contador abierto" : state.Notice ?? "Repeticiones guardadas localmente";
+        _token.Text = state.Token.Text;
+        _token.ForeColor = state.Token.HasConfirmedToken ? Theme.Gold : Theme.Muted;
         _overlay.Text = _monitor.OverlayVisible ? "Overlay activo" : "Overlay";
         RenderProfiles(state);
         RenderTeam(state.Team);

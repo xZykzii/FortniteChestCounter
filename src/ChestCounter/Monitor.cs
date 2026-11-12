@@ -7,6 +7,7 @@ public sealed record MonitorState(OverlayView View, IReadOnlyList<Profile> Profi
 {
     /// <summary>Equipo de la partida en curso o de la última (null si «Compañeros» está desactivado).</summary>
     public TeamSummary? Team { get; init; }
+    public TokenStatus Token { get; init; } = TokenStatus.Empty;
 }
 
 /// <summary>Un compañero y los cofres que se le vieron abrir (un mínimo).</summary>
@@ -490,6 +491,7 @@ public sealed class Monitor
         var state = new MonitorState(view, Profiles.List(_data, _config), Profiles.Current(_data, _config)?.Key, _update, notice, _autoCloseAt != null, BuildStats())
         {
             Team = BuildTeam(),
+            Token = TreasureStatus.Current(_tracker.IsLive ? liveAdjusted : null, Profiles.View(_data, _config).Matches),
         };
         Changed?.Invoke(state);
     }

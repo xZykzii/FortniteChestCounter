@@ -25,6 +25,7 @@ internal static class CombinedChecks
         Directory.CreateDirectory(scratch);
         L.Use("es");
         SeasonChecks.Run(Check);
+        TreasureChecks.Run(Check);
         IconContrast();
         var (store, config, data) = Migration(snapshot, Path.Combine(scratch, "migration"));
         Totals(store, config, data);

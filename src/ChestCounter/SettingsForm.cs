@@ -27,8 +27,9 @@ public sealed class SettingsForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96, 96);
         ClientSize = new Size(808, 680);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        MinimumSize = Size;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MaximizeBox = true;
         MinimizeBox = false;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.CenterParent;
@@ -43,14 +44,17 @@ public sealed class SettingsForm : Form
         SelectPage(0);
         var close = Branding.Button(this, "Listo", Close, true);
         close.SetBounds(652, 616, 132, 40);
+        close.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         CancelButton = close;
         var repository = Branding.RepositoryLink(this);
         repository.SetBounds(24, 616, 216, 40);
+        repository.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
     }
 
     private void BuildNavigation()
     {
         _content.SetBounds(236, 108, 548, 488);
+        _content.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         Controls.Add(_content);
         var names = new[] { "General", "Overlay", "Historial y archivos" };
         for (var i = 0; i < _pages.Length; i++)
@@ -93,6 +97,8 @@ public sealed class SettingsForm : Form
         y = Heading(page, "Equipo y conteo", "Los compañeros son un mínimo observado", y + 20);
         y = Toggle(page, "Mostrar compañeros", "Incluye el desglose y el ranking", y, _monitor.Config.ShowTeammates, _monitor.SetShowTeammates);
         y = Toggle(page, "Sumar cofres del equipo", "Puedes alternarlo con E en la ventana", y, _monitor.Config.CountTeammateChests, _monitor.SetCountTeammates);
+        y = Toggle(page, "Sumar tesoros del equipo", "Incluye premios compartidos en tus totales y colección", y, _monitor.Config.CountTeammateTreasures,
+            value => _monitor.SetCountExtra(c => c.CountTeammateTreasures = value));
         y = Toggle(page, "Cajas de munición", "Añadirlas al conteo mostrado", y, _monitor.Config.CountAmmoBoxes,
             value => _monitor.SetCountExtra(c => c.CountAmmoBoxes = value));
         y = Toggle(page, "Cajas de comida", "Añadirlas al conteo mostrado", y, _monitor.Config.CountFoodBoxes,

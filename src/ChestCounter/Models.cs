@@ -16,6 +16,8 @@ public sealed class ChestRecord
 
 public sealed class TreasureFind
 {
+    public string Evidence { get; set; } = "";
+    [JsonIgnore] public bool IsPirateToken => TreasureStatus.IsToken(this);
     /// <summary>Name to display (re-resolved from treasures.json so renaming updates old matches).</summary>
     public string DisplayName => PrizeId != null ? TreasureNames.Friendly(PrizeId) : L.Name(Item);
 
@@ -100,6 +102,8 @@ public sealed class MatchRecord
     public List<TeammateRecord>? Teammates { get; set; }
     public List<SquadmateChestCount>? Squadmates { get; set; }
     public List<TreasureFind> TeamTreasureFinds { get; set; } = new();
+    [JsonIgnore] public int TeamTreasuresAdded { get; private set; }
+    [JsonIgnore] public IEnumerable<TreasureFind> OwnTreasureFinds => TreasureFinds.Take(TreasureFinds.Count - TeamTreasuresAdded);
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtraFields { get; set; }
 
@@ -128,17 +132,20 @@ public sealed class MatchRecord
     /// asked, the chests the teammates were seen opening. The saved history is never changed. Returns the same match
     /// when nothing is added.
     /// </summary>
-    public MatchRecord WithExtras(IReadOnlyCollection<string> kinds, bool addTeammates = false)
+    public MatchRecord WithExtras(IReadOnlyCollection<string> kinds, bool addTeammates = false, bool addTeammateTreasures = false)
     {
         var extra = kinds.Sum(Interactions);
         var mates = addTeammates ? TeammatesSeen(kinds) : 0;
-        if (extra == 0 && mates == 0)
+        var shared = addTeammateTreasures ? TeamTreasureFinds : new List<TreasureFind>();
+        if (extra == 0 && mates == 0 && shared.Count == 0)
         {
             return this;
         }
         var copy = (MatchRecord)MemberwiseClone();
         copy.ChestsOpened = ChestsOpened + extra + mates;
         copy.TeammatesAdded = mates;
+        copy.TreasureFinds = TreasureFinds.Concat(shared).ToList();
+        copy.TeamTreasuresAdded = shared.Count;
         return copy;
     }
 }
@@ -225,6 +232,7 @@ public sealed class Config
     /// kinds, only the figures shown change: the saved history keeps the player's own chests.
     /// </summary>
     public bool CountTeammateChests { get; set; }
+    public bool CountTeammateTreasures { get; set; }
 
     /// <summary>Non-chest kinds the player chose to add to the chest total.</summary>
     public IReadOnlyCollection<string> ExtraKinds()

@@ -1,5 +1,12 @@
 # Cambios
 
+## 2.4.0
+
+- Ajustes permite redimensionar y maximizar. La opción «Sumar tesoros del equipo» incluye los premios compartidos en los totales y la colección.
+- La ventana muestra el estado del token pirata y sus destinatarios cuando se detecta en la partida actual o la última. Tesoros incluye el desglose por destinatario y los premios observados en otros jugadores.
+- Las nuevas partidas completan los datos de un premio cuando llegan en mensajes posteriores del replay y distinguen carteles de espíritus de cofres. El origen inferido por tiempo se marca como probable.
+- El texto de cobertura de compañeros describe el mínimo registrado en el replay.
+
 ## 2.3.9
 
 - Las probabilidades de premios semanales usan los cofres abiertos durante su rotación. El informe muestra el premio y los cofres elegibles de cada fila, con alcance de temporada para el token y los artilugios.

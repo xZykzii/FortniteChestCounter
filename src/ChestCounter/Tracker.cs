@@ -299,7 +299,8 @@ public sealed class Tracker
             try { _store.SaveConfig(_config); } catch { /* ignore */ }
         }
 
-        var newIds = _store.RegisterPrizeIds(record.TreasureFinds.Where(f => f.PrizeId != null).Select(f => f.PrizeId!));
+        var newIds = _store.RegisterPrizeIds(record.TreasureFinds.Concat(record.TeamTreasureFinds)
+            .Where(f => f.PrizeId != null).Select(f => f.PrizeId!).Concat(record.SeenPrizes.Select(f => f.PrizeId)));
         return new Outcome(record, Updated: existing != null, NewPrizeIds: newIds);
     }
 

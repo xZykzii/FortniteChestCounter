@@ -40,7 +40,6 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
 
     private static readonly Regex VehicleClass = new(@"_Vehicle(_Static)?_C$|MeatballVehicle", RegexOptions.Compiled);
     private sealed record EquipEvent(float Time, string Item, uint Pawn);
-    private sealed record PrizeEvent(float Time, string PrizeId, uint? Pawn, string Container);
 
     // "DelilahPrize:dpid_item4", or a bare GUID (the Pirate Shop Access token has no prefix).
     private static readonly Regex PrizeIdPattern = new(@"[A-Za-z][A-Za-z0-9_]*:[A-Za-z0-9_.\-]+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOptions.Compiled);
@@ -94,6 +93,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
 
             return path.Contains("/Containers/", StringComparison.OrdinalIgnoreCase)
                    || last.Contains("Chest", StringComparison.OrdinalIgnoreCase)
+                   || last.Contains("SpritePoster", StringComparison.OrdinalIgnoreCase)
                 ? GenericContainer.GroupPath
                 : null;
         };
@@ -195,10 +195,10 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         !label.StartsWith("Prop_", StringComparison.OrdinalIgnoreCase) && ChestKinds.IsChest(ChestKinds.Classify(label));
     private readonly List<TossEvent> _tosses = new();
     private readonly List<EquipEvent> _equips = new();
-    private readonly List<PrizeEvent> _prizes = new();
+    private readonly TreasurePrizeLog _prizeLog = new();
+    private IEnumerable<TreasurePrizeEvent> _prizes => _prizeLog.Events.Where(p => p.HasPrize);
     private readonly Dictionary<string, float> _firstExport = new();
-    private static readonly Regex TrackedExport = new(@"TreasureHandler|WID_(FlameCeleb|RelicExtractor|RelicFinder|LuckyLocator|SmugglerExtractionKey)", RegexOptions.Compiled);
-    private readonly HashSet<uint> _prizeChannelsSeen = new();
+    private static readonly Regex TrackedExport = new(@"TreasureHandler|WID_(FlameCeleb|RelicExtractor|RelicFinder|LuckyLocator|SmugglerExtractionKey|PirateShop|DelilahShop)", RegexOptions.Compiled);
     private readonly HashSet<uint> _equipChannelsSeen = new();
     private readonly Dictionary<uint, uint> _pawnToPlayerState = new();
     private readonly Dictionary<uint, int> _playerStateToPlayerId = new();
@@ -481,7 +481,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         _channelSearched.Remove(channelIndex);
         _lastSearcher.Remove(channelIndex);
         _equipChannelsSeen.Remove(channelIndex);
-        _prizeChannelsSeen.Remove(channelIndex);
+        _prizeLog.ResetChannel(channelIndex);
         _orphanChannels.Remove(channelIndex);
     }
 
@@ -611,11 +611,8 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 break;
 
             case TreasureHuntChest prize:
-                var prizeId = ReadPrizeId(prize.PrizeTemplateId);
-                if (prizeId != null && prize.bSuccess != false && _prizeChannelsSeen.Add(channelIndex))
-                {
-                    _prizes.Add(new PrizeEvent(Now, prizeId, prize.OpeningPawn ?? prize.Instigator, PathOf(prize.SourceContainer)));
-                }
+                _prizeLog.Record(channelIndex, Now, ReadPrizeId(prize.PrizeTemplateId),
+                    prize.OpeningPawn is > 0 ? prize.OpeningPawn : prize.Instigator, PathOf(prize.SourceContainer), prize.bSuccess);
                 break;
 
             case GenericWeapon weapon:
@@ -915,7 +912,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 SourceKind = kind,
                 SourceBlueprint = label,
                 SourceIsChest = ChestKinds.IsChest(kind),
-                SourceCertain = true,
+                SourceCertain = !string.IsNullOrEmpty(label),
             });
         }
 
@@ -936,8 +933,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         var hasTeam = target?.TeamIndex is int ti && players.Any(p => p.TeamIndex == ti && p.Id != target.Id);
 
         // Chests of each teammate, counted exactly like the player's own (same events, same rules). The only limit
-        // is what the replay holds: a chest is recorded when it is within about 150 m of the recording player, or
-        // when that player comes by later while it still shows who searched it.
+        // is what the replay holds. The coverage has no guaranteed fixed radius.
         var teamChests = new List<TeamChestCount>();
         if (target?.TeamIndex is int squad)
         {
@@ -974,7 +970,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 SourceKind = kind,
                 SourceBlueprint = label,
                 SourceIsChest = ChestKinds.IsChest(kind),
-                SourceCertain = true,
+                SourceCertain = !string.IsNullOrEmpty(label),
                 Teammate = teammatePawns[pz.Pawn!.Value],
             });
         }
@@ -1006,11 +1002,13 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         for (var hi = 0; hi < handlerTimes.Count; hi++)
         {
             var h = handlerTimes[hi];
+            var receipt = _grants.FirstOrDefault(g => targetPlayerStates.Contains(g.PlayerStateActor) && g.Time == h);
             var nextHandler = hi + 1 < handlerTimes.Count ? handlerTimes[hi + 1] : float.MaxValue;
             // Buried chests grant the prize when the dig completes, ~2.5s before the chest reports "searched": allow
             // up to +4s for them only.
             var closest = _searches
-                .Where(x => x.Time >= h - 3 && (x.Time <= h + 2 || (x.Time <= h + 4 && ChestKinds.Classify(x.Label) == ChestKinds.Buried)))
+                .Where(x => x.SearcherPawn is uint actor && (targetPawns.Contains(actor) || teammatePawns.ContainsKey(actor))
+                    && x.Time >= h - 3 && (x.Time <= h + 2 || (x.Time <= h + 4 && ChestKinds.Classify(x.Label) == ChestKinds.Buried)))
                 .OrderBy(x => Math.Abs(x.Time - h))
                 .FirstOrDefault();
             var mine = closest != null && closest.SearcherPawn is uint cp && targetPawns.Contains(cp);
@@ -1047,14 +1045,15 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 {
                     Item = itemName ?? TreasureNames.UnknownGizmo,
 
-                    RawItem = item ?? "GA_TreasureHandler",
+                    RawItem = TreasureStatus.IsTokenName(receipt?.Handler) ? receipt!.Handler : item ?? receipt?.Handler ?? "GA_TreasureHandler",
+                    Evidence = receipt != null ? "recipient-handler" : "handler-export",
                     PrizeId = unknownKey,
                     ObtainedAtSeconds = hr,
                     TimeExact = true,
                     SourceKind = kind,
                     SourceBlueprint = closest.Label,
                     SourceIsChest = ChestKinds.IsChest(kind),
-                    SourceCertain = true,
+                    SourceCertain = false,
                     SourceDestroyed = closest.Destroyed,
                     FromPrizeHandler = true,
                 });
@@ -1068,13 +1067,14 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 teamFinds.Add(new TreasureFind
                 {
                     Item = TreasureNames.UnknownGizmo,
-                    RawItem = "GA_TreasureHandler",
+                    RawItem = receipt?.Handler ?? "GA_TreasureHandler",
+                    Evidence = receipt != null ? "recipient-handler" : "handler-export",
                     ObtainedAtSeconds = MathF.Round(h, 1),
                     TimeExact = true,
                     SourceKind = kind,
                     SourceBlueprint = byMate != null ? closest!.Label : "",
-                    SourceIsChest = byMate == null || ChestKinds.IsChest(kind),
-                    SourceCertain = byMate != null,
+                    SourceIsChest = byMate != null && ChestKinds.IsChest(kind),
+                    SourceCertain = false,
                     SourceDestroyed = byMate != null && closest!.Destroyed,
                     FromPrizeHandler = true,
                     Teammate = byMate ?? "",
@@ -1094,17 +1094,24 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         // Golden chests of everybody else in reach: the server sends the animated chest, with its prize and the pawn that
         // opened it, to every player around (same as for the player's own).
         var seen = new List<SeenPrize>();
-        foreach (var pz in _prizes.Where(p => p.Pawn is uint pawn && !targetPawns.Contains(pawn) && !teammatePawns.ContainsKey(pawn)))
+        foreach (var pz in _prizes.Where(p => p.Pawn is not uint pawn || (!targetPawns.Contains(pawn) && !teammatePawns.ContainsKey(pawn))))
         {
-            var who = _pawnToPlayerState.TryGetValue(pz.Pawn!.Value, out var ops) && _playerStateToPlayerId.TryGetValue(ops, out var opid)
+            var who = pz.Pawn is uint other && _pawnToPlayerState.TryGetValue(other, out var ops) && _playerStateToPlayerId.TryGetValue(ops, out var opid)
                 ? players.FirstOrDefault(p => p.Id == opid)
                 : null;
             seen.Add(new SeenPrize
             {
                 Player = who?.PlayerName ?? (who?.IsBot == true ? "Bot" : L.T("joueur inconnu", "unknown player", "jugador desconocido")),
-                PrizeId = pz.PrizeId,
+                PrizeId = pz.PrizeId!,
                 TimeSeconds = MathF.Round(pz.Time, 1),
             });
+        }
+        foreach (var grant in _grants.Where(g => !targetPlayerStates.Contains(g.PlayerStateActor)))
+        {
+            if (!_playerStateToPlayerId.TryGetValue(grant.PlayerStateActor, out var playerId)) continue;
+            var recipient = players.FirstOrDefault(p => p.Id == playerId);
+            if (recipient == null || (target?.TeamIndex is int ownTeam && recipient.TeamIndex == ownTeam)) continue;
+            TreasureStatus.AddObservedToken(seen, grant.Handler, recipient.PlayerName ?? "Jugador desconocido", grant.Time);
         }
         finds.Sort((a, b) => (a.ObtainedAtSeconds ?? float.MaxValue).CompareTo(b.ObtainedAtSeconds ?? float.MaxValue));
 
@@ -1377,6 +1384,7 @@ public static class ChestKinds
         if (b.Contains("foodbox") || b.Contains("food_box")) return FoodBox;
         if (b.Contains("rarechest") || b.Contains("legendary") || b.Contains("rare_chest")) return Rare;
         if (b.Contains("buried")) return Buried;
+        if (b.Contains("spriteposter") && !b.Contains("chest")) return OtherContainer;
         if (b.Contains("spriteposter") || b.Contains("booty")) return PosterChest;
         if (b.Contains("relic") || b.Contains("extraction")) return Extraction;
         if (b.Contains("tiered_chest") || b.Contains("normalchest") || b.Contains("standardchest")) return Normal;
