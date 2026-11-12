@@ -55,8 +55,9 @@ public static class NativeOverlay
 
     /// <summary>"hud" (figures only, under the minimap, like the game's HUD) or "classic" (dark card).</summary>
     private static volatile string _style = "classic";
-    private static IntPtr _fontHudBig, _fontHudSmall;
-    private static int _hudBigH, _hudSmallH;
+    private const int HUD_CAPTION_SIZE = 26, HUD_DETAIL_ROWS = 3;
+    private static IntPtr _fontHudBig, _fontHudCaption, _fontHudSmall;
+    private static int _hudBigH, _hudCaptionH, _hudSmallH;
 
     /// <summary>Pixels of this color are fully transparent (styles without a background). Almost black, so that the
     /// anti-aliased edge of the black outline around the text blends into it without any colored fringe.</summary>
@@ -290,7 +291,7 @@ public static class NativeOverlay
     /// <summary>(Re)creates the fonts for the current display scaling and chosen size.</summary>
     private static void CreateFonts()
     {
-        foreach (var old in new[] { _fontBig, _fontSmall, _fontHeader, _fontCaption, _fontLabel, _fontIcon, _fontHudBig, _fontHudSmall })
+        foreach (var old in new[] { _fontBig, _fontSmall, _fontHeader, _fontCaption, _fontLabel, _fontIcon, _fontHudBig, _fontHudCaption, _fontHudSmall })
         {
             if (old != IntPtr.Zero) DeleteObject(old);
         }
@@ -312,6 +313,7 @@ public static class NativeOverlay
         _fontLabel = CreateOverlayFont(14);
         _fontIcon = CreateFontW(-S(14), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe MDL2 Assets");
         _fontHudBig = CreateOverlayFont(36);
+        _fontHudCaption = CreateOverlayFont(HUD_CAPTION_SIZE);
         _fontHudSmall = CreateOverlayFont(16);
     }
 
@@ -683,17 +685,18 @@ public static class NativeOverlay
             var sessionLabel = OverlayModel.Upper(L.T("Sesión", "Session"));
             var rowsW = new[]
             {
-                TextWidth(hdc, _fontHudSmall, v.TotalCaption, out _),
+                TextWidth(hdc, _fontHudCaption, v.TotalCaption, out _hudCaptionH),
                 Sc(14) + TextWidth(hdc, _fontHudSmall, state.Label + Sep + state.Value, out _hudSmallH),
                 TextWidth(hdc, _fontHudSmall, sessionLabel + Sep + v.Session, out _),
                 Sc(22) + TextWidth(hdc, _fontHudSmall, v.Treasures, out _),
             }.Max();
             w = lockW + pad + Math.Max(Sc(36) + Sc(8) + bigW, rowsW) + pad + Sc(14);
-            h = pad + _hudBigH + 4 * (_hudSmallH + Sc(2)) + pad;
+            var totalHeight = _hudBigH + Sc(2) + _hudCaptionH;
+            h = pad + totalHeight + HUD_DETAIL_ROWS * (_hudSmallH + Sc(2)) + pad;
             w = Math.Max(_stableW, w);
             _stableW = w;
             _lockRect = new RECT { Left = Sc(2), Top = 0, Right = lockW, Bottom = h };
-            _modeRect = new RECT { Left = lockW, Top = pad, Right = w - pad, Bottom = pad + _hudBigH + Sc(2) + _hudSmallH };
+            _modeRect = new RECT { Left = lockW, Top = pad, Right = w - pad, Bottom = pad + totalHeight };
 
             GetWindowRect(hwnd, out var cur);
             int nx = cur.Left, ny = cur.Top;
@@ -844,10 +847,11 @@ public static class NativeOverlay
         Chest(hdc, ix, y + (_hudBigH - ih) / 2, iw, ih, gold, Rgb(224, 165, 38), ink, ink);
         y += _hudBigH + Sc(2);
 
+        Outlined(hdc, _fontHudCaption, _locked ? white : gold, v.TotalCaption, left, y, right, y + _hudCaptionH, DT_RIGHT, thin: true);
+        y += _hudCaptionH + Sc(2);
+
         // Last match (or the match in progress), session, treasures.
         var rowH = _hudSmallH;
-        Outlined(hdc, _fontHudSmall, _locked ? white : gold, v.TotalCaption, left, y, right, y + rowH, DT_RIGHT, thin: true);
-        y += rowH + Sc(2);
         var stateLeft = LabelValue(hdc, state.Label, state.Value, left, right, y, rowH, live ? gold : white);
         if (state.Dot)
         {

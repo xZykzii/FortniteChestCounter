@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.3.4
+
+- El HUD usa un tamaño intermedio para **COFRES** y **COFRES (SQUAD)**. El rótulo queda entre la cifra principal y las etiquetas de detalle, también en OBS.
+
 ## 2.3.3
 
 - El filtro «Mostrar partidas desde» excluye los totales manuales sin fecha del contador, las estadísticas y el informe. Al quitarlo se recupera el total histórico.
