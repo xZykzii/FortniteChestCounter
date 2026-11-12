@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace ChestCounter;
@@ -70,15 +69,12 @@ internal static class Branding
         graphics.DrawImage(Chest, bounds);
     }
 
-    public static Icon WindowIcon()
+    public static Icon WindowIcon(Size? size = null)
     {
-        var handle = Chest.GetHicon();
-        try { return (Icon)Icon.FromHandle(handle).Clone(); }
-        finally { DestroyIcon(handle); }
+        using var source = typeof(Branding).Assembly.GetManifestResourceStream("ChestCounter.Assets.app.ico")
+            ?? throw new InvalidOperationException("No se encontró el icono de la aplicación.");
+        return size is { } requested ? new Icon(source, requested) : new Icon(source);
     }
-
-    [DllImport("user32.dll")]
-    private static extern bool DestroyIcon(IntPtr icon);
 
     public static Label Label(Control parent, string text, float size = 10, Color? color = null)
     {

@@ -25,6 +25,7 @@ internal static class CombinedChecks
         Directory.CreateDirectory(scratch);
         L.Use("es");
         SeasonChecks.Run(Check);
+        IconTransparency();
         var (store, config, data) = Migration(snapshot, Path.Combine(scratch, "migration"));
         Totals(store, config, data);
         Filters(config, data);
@@ -40,6 +41,30 @@ internal static class CombinedChecks
     {
         if (!hasPassed) throw new InvalidOperationException(message);
         _checks++;
+    }
+
+    private static void IconTransparency()
+    {
+        const int VISIBLE_ALPHA = 200;
+        const int MIN_VISIBLE_PERCENT = 25;
+        foreach (var side in new[] { 16, 24, 32, 48, 128 })
+        {
+            using var source = typeof(AppInfo).Assembly.GetManifestResourceStream("ChestCounter.Assets.app.ico");
+            Check(source != null, "The Windows icon is available from the executable.");
+            using var icon = new System.Drawing.Icon(source!, new System.Drawing.Size(side, side));
+            using var bitmap = icon.ToBitmap();
+            Check(bitmap.Width == side && bitmap.Height == side, $"The Windows icon provides a native {side}px frame.");
+            var visible = 0;
+            for (var y = 0; y < side; y++)
+            {
+                for (var x = 0; x < side; x++)
+                {
+                    if (bitmap.GetPixel(x, y).A >= VISIBLE_ALPHA) visible++;
+                }
+            }
+            Check(visible * 100 >= side * side * MIN_VISIBLE_PERCENT && bitmap.GetPixel(0, 0).A == 0,
+                $"The {side}px chest is opaque inside and transparent outside.");
+        }
     }
 
     private static (Store Store, Config Config, TrackerData Data) Migration(string source, string destination)

@@ -7,7 +7,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>ChestCounter</AssemblyName>
     <RootNamespace>ChestCounter</RootNamespace>
-    <Version>2.3.5</Version>
+    <Version>2.3.6</Version>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- Single-file publish: the parser discovers its types by reflection, so no trimming. -->
     <PublishTrimmed>false</PublishTrimmed>
@@ -19,7 +19,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Fonts\Anton-Regular.ttf" LogicalName="ChestCounter.Anton-Regular.ttf" />
     <None Update="Fonts\OFL-Anton.txt" CopyToPublishDirectory="PreserveNewest" />
-    <!-- Logos de redes para el pie de Ajustes (PNG en el propio ejecutable). -->
+    <EmbeddedResource Include="app.ico" LogicalName="ChestCounter.Assets.app.ico" />
     <EmbeddedResource Include="Assets\chest.png" LogicalName="ChestCounter.Assets.chest.png" />
     <EmbeddedResource Include="..\..\content\content.json" LogicalName="content.json" />
     <EmbeddedResource Include="..\..\assets\treasures\*.webp" LogicalName="ChestCounter.Treasures.%(Filename)%(Extension)" />

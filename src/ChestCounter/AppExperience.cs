@@ -11,6 +11,7 @@ public sealed class AppExperience : IDisposable
     private readonly Form _form;
     private readonly Monitor _monitor;
     private readonly NotifyIcon _tray;
+    private readonly Icon _trayIcon;
     private readonly EventWaitHandle _activation;
     private readonly RegisteredWaitHandle _wait;
     private bool _isExiting;
@@ -19,7 +20,8 @@ public sealed class AppExperience : IDisposable
     {
         _form = form;
         _monitor = monitor;
-        _tray = new NotifyIcon { Icon = Branding.WindowIcon(), Text = "Contador de cofres", Visible = true };
+        _trayIcon = Branding.WindowIcon(SystemInformation.SmallIconSize);
+        _tray = new NotifyIcon { Icon = _trayIcon, Text = "Contador de cofres", Visible = true };
         var menu = new ContextMenuStrip { BackColor = Theme.Card, ForeColor = Theme.Ink };
         menu.Items.Add("Abrir contador", null, (_, _) => Restore());
         menu.Items.Add("Abrir informe", null, (_, _) => Branding.Open(store.ReportPath));
@@ -80,6 +82,7 @@ public sealed class AppExperience : IDisposable
         _tray.Visible = false;
         _tray.ContextMenuStrip?.Dispose();
         _tray.Dispose();
+        _trayIcon.Dispose();
         _form.Resize -= OnResize;
         _form.FormClosing -= OnClosing;
     }

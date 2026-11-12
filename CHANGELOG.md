@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.3.6
+
+- El icono del cofre se distingue en los tamaños pequeños de la barra de tareas, la bandeja y los accesos directos de Windows.
+
 ## 2.3.5
 
 - **COFRES** y **COFRES (SQUAD)** recuperan su tamaño anterior. El bloque de texto queda más cerca de la cifra en el HUD de Windows y OBS.
