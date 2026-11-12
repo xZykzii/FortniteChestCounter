@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.3.7
+
+- Nuevo icono de Windows con cofre dorado simplificado y fondo opaco para que se distinga en la barra de tareas.
+
 ## 2.3.6
 
 - El icono del cofre se distingue en los tamaños pequeños de la barra de tareas, la bandeja y los accesos directos de Windows.

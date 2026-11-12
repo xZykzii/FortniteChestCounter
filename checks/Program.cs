@@ -25,7 +25,7 @@ internal static class CombinedChecks
         Directory.CreateDirectory(scratch);
         L.Use("es");
         SeasonChecks.Run(Check);
-        IconTransparency();
+        IconContrast();
         var (store, config, data) = Migration(snapshot, Path.Combine(scratch, "migration"));
         Totals(store, config, data);
         Filters(config, data);
@@ -43,10 +43,9 @@ internal static class CombinedChecks
         _checks++;
     }
 
-    private static void IconTransparency()
+    private static void IconContrast()
     {
-        const int VISIBLE_ALPHA = 200;
-        const int MIN_VISIBLE_PERCENT = 25;
+        const int MIN_GOLD_PERCENT = 15;
         foreach (var side in new[] { 16, 24, 32, 48, 128 })
         {
             using var source = typeof(AppInfo).Assembly.GetManifestResourceStream("ChestCounter.Assets.app.ico");
@@ -54,16 +53,19 @@ internal static class CombinedChecks
             using var icon = new System.Drawing.Icon(source!, new System.Drawing.Size(side, side));
             using var bitmap = icon.ToBitmap();
             Check(bitmap.Width == side && bitmap.Height == side, $"The Windows icon provides a native {side}px frame.");
-            var visible = 0;
+            var opaque = 0;
+            var gold = 0;
             for (var y = 0; y < side; y++)
             {
                 for (var x = 0; x < side; x++)
                 {
-                    if (bitmap.GetPixel(x, y).A >= VISIBLE_ALPHA) visible++;
+                    var pixel = bitmap.GetPixel(x, y);
+                    if (pixel.A == byte.MaxValue) opaque++;
+                    if (pixel.R >= 200 && pixel.G >= 120 && pixel.B < pixel.G) gold++;
                 }
             }
-            Check(visible * 100 >= side * side * MIN_VISIBLE_PERCENT && bitmap.GetPixel(0, 0).A == 0,
-                $"The {side}px chest is opaque inside and transparent outside.");
+            Check(opaque == side * side && gold * 100 >= side * side * MIN_GOLD_PERCENT,
+                $"The {side}px icon has an opaque background and a bright chest.");
         }
     }
 
