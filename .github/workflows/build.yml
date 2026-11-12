@@ -1,0 +1,23 @@
+name: Verificar y compilar
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Comprobar migración con datos sintéticos
+        run: dotnet run --project checks/CombinedChecks.csproj -c Release -p:OfflineBuild=true -- --self-test
+      - name: Compilar ejecutable autónomo
+        run: dotnet publish src/ChestCounter/ChestCounter.csproj -c Release -r win-x64 --self-contained true -p:OfflineBuild=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FortniteChestCounter-windows-x64
+          path: dist/ChestCounter.exe

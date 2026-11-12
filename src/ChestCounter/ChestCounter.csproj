@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Windows app: the standby process has no window; the tool opens its own console (NativeConsole). -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <AssemblyName>ChestCounter</AssemblyName>
+    <RootNamespace>ChestCounter</RootNamespace>
+    <Version>2.2.0</Version>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Single-file publish: the parser discovers its types by reflection, so no trimming. -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- Small idle footprint: workstation, non-concurrent GC (no background GC thread) and a GC that gives memory back. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\BarlowCondensed-Bold.ttf" LogicalName="ChestCounter.BarlowCondensed-Bold.ttf" />
+    <!-- Logos de redes para el pie de Ajustes (PNG en el propio ejecutable). -->
+    <EmbeddedResource Include="Assets\chest.png" LogicalName="ChestCounter.Assets.chest.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\lib\FortniteReplayReader\FortniteReplayReader.csproj" />
+  </ItemGroup>
+</Project>
