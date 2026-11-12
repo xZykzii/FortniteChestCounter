@@ -371,7 +371,10 @@ public static class ReportWriter
         var sessionMatches = matches.Where(IsThisSession).ToList();
         var session = sessionMatches.Sum(m => m.ChestsOpened);
         var wins = matches.Count(m => m.Placement == 1);
-        var player = matches.Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrEmpty(n)) ?? "";
+        var player = matches.Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrEmpty(n))
+            ?? profiles.FirstOrDefault(p => p.Key == config.Profile)?.Name
+            ?? profiles.FirstOrDefault()?.Name
+            ?? "";
         string N(int n) => n.ToString("#,0", Loc);
 
         var sb = new StringBuilder();
@@ -426,7 +429,14 @@ public static class ReportWriter
         var initialNote = initialChests > 0
             ? L.F("Incluye {0} estimados de antes de usar la herramienta", "Includes {0} estimated from before the tool", N(initialChests))
             : L.T("Cofres abiertos o destruidos por ti, según tus replays", "Chests you opened or destroyed, from your replays");
-        if (reported.Matches > 0) initialNote = WebUtility.HtmlEncode(HistoryCompatibility.ReportedNote(data));
+        if (config.CountFrom is { } from)
+        {
+            initialNote = H(L.F("Desde {0:d} · solo partidas con fecha", "Since {0:d} · dated matches only", from));
+        }
+        else if (reported.Matches > 0)
+        {
+            initialNote = H(HistoryCompatibility.ReportedNote(data));
+        }
         var matesAdded = matches.Sum(m => m.TeammatesAdded);
         if (config.CountTeammateChests && matesAdded > 0)
         {

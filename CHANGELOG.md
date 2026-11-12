@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.3.3
+
+- El filtro «Mostrar partidas desde» excluye los totales manuales sin fecha del contador, las estadísticas y el informe. Al quitarlo se recupera el total histórico.
+- El perfil seleccionado sigue activo aunque no tenga partidas en el período.
+
 ## 2.3.2
 
 - Enlace al repositorio de GitHub en la ventana, Ajustes y el informe.

@@ -209,7 +209,9 @@ public sealed class MainForm : Form
         _total.Text = state.View.Total;
         _caption.Text = state.View.TotalCaption;
         var reported = _monitor.ReportedTotals;
-        _external.Text = reported.Matches > 0 ? $"Incluye {L.N(reported.Chests)} cofres de tu otro PC" : "Historial guardado en este PC";
+        _external.Text = _monitor.Config.CountFrom is { } from
+            ? $"Desde {from:dd/MM/yyyy} · solo partidas con fecha"
+            : reported.Matches > 0 ? $"Incluye {L.N(reported.Chests)} cofres de tu otro PC" : "Historial guardado en este PC";
         _current.Text = state.View.Current ?? "—";
         _currentCaption.Text = state.View.CurrentLive ? "Partida en curso" : "Última partida";
         _session.Text = "Sesión · " + state.View.Session;

@@ -560,7 +560,13 @@ public sealed class Tracker
     private void PrintMatch(MatchRecord m, bool updated)
     {
         m = Profiles.Adjust(m, _config)!;
-        var total = _data.Matches.Where(x => Profiles.Key(x) == Profiles.Key(m) && Profiles.Counted(x, _config)).Sum(x => Profiles.Adjust(x, _config)!.ChestsOpened) + Profiles.InitialChests(_config, Profiles.Key(m));
+        var key = Profiles.Key(m);
+        var total = _data.Matches.Where(x => Profiles.Key(x) == key && Profiles.Counted(x, _config))
+            .Sum(x => Profiles.Adjust(x, _config)!.ChestsOpened);
+        if (!_config.CountFrom.HasValue)
+        {
+            total += Profiles.InitialChests(_config, key) + _data.ReportedByProfile.GetValueOrDefault(key).Chests;
+        }
         var when = (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime();
 
         Console.ForegroundColor = ConsoleColor.Green;

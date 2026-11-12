@@ -169,7 +169,9 @@ public sealed class SettingsForm : Form
             Value = _monitor.Config.CountFrom ?? DateTime.Today, Font = Theme.Text(10) };
         page.Controls.Add(from);
         from.ValueChanged += (_, _) => _monitor.SetCountFrom(from.Checked ? from.Value.Date : null);
-        y = Heading(page, "Archivos", "Tus datos se conservan en la misma carpeta", y + ROW_HEIGHT + 20);
+        TextAt(page, "Con el filtro activo, los totales sin fecha quedan en el historial completo.",
+            9, 0, y + 34, CONTENT_WIDTH, 28, Theme.Muted);
+        y = Heading(page, "Archivos", "Tus datos se conservan en la misma carpeta", y + ROW_HEIGHT + 32);
         var folder = TextAt(page, _monitor.Config.DemosFolder, 9, 0, y, 360, 52, Theme.Muted);
         var browse = Branding.Button(page, "Cambiar", () => ChooseFolder(folder));
         browse.SetBounds(388, y + 4, 120, 36);

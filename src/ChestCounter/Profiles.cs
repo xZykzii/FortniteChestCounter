@@ -53,23 +53,20 @@ public static class Profiles
     public static string Key(MatchRecord m) => !string.IsNullOrEmpty(m.EpicId) ? m.EpicId : m.PlayerName ?? "";
 
     public static List<Profile> List(TrackerData d, Config? c = null) => d.Matches
+        .Where(IsSupportedVersion)
         .GroupBy(Key)
         .Select(g =>
         {
-            var validMatches = g.Where(m => c == null ? IsSupportedVersion(m) : Counted(m, c)).ToList();
-            if (validMatches.Count == 0)
-            {
-                return null;
-            }
-            var latest = validMatches.OrderByDescending(When).First();
-            var name = validMatches.OrderByDescending(When).Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+            var history = g.OrderByDescending(When).ToList();
+            var validMatches = c == null ? history : history.Where(m => Counted(m, c)).ToList();
+            var latest = history[0];
+            var name = history.Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
             var chests = validMatches.Sum(m => (c != null ? Adjust(m, c)! : m).ChestsOpened);
-            var reported = d.ReportedByProfile.GetValueOrDefault(g.Key);
-            chests += reported.Chests + (c != null ? InitialChests(c, g.Key) : 0);
+            var reported = c?.CountFrom == null ? d.ReportedByProfile.GetValueOrDefault(g.Key) : default;
+            var estimated = c is { CountFrom: null } ? InitialChests(c, g.Key) : 0;
+            chests += reported.Chests + estimated;
             return new Profile(g.Key, name ?? L.T("Cuenta desconocida", "Unknown account"), validMatches.Count + reported.Matches, chests, When(latest));
         })
-        .Where(p => p != null)
-        .Select(p => p!)
         .OrderByDescending(p => p.LastPlayed)
         .ToList();
 
@@ -96,7 +93,9 @@ public static class Profiles
             CreatedUtc = d.CreatedUtc,
             Matches = d.Matches.Where(m => (current == null || Key(m) == current.Key) && Counted(m, c)).Select(m => Adjust(m, c)!).ToList(),
             ProcessedFiles = d.ProcessedFiles,
-            ReportedByProfile = new() { [current?.Key ?? c.Profile ?? ""] = HistoryCompatibility.Reported(d, c) },
+            ReportedByProfile = c.CountFrom.HasValue
+                ? new()
+                : new() { [current?.Key ?? c.Profile ?? ""] = HistoryCompatibility.Reported(d, c) },
         };
     }
 
@@ -114,8 +113,12 @@ public static class Profiles
     public static int InitialChests(Config c, string? key) =>
         c.InitialChests != null && c.InitialChests.TryGetValue(key ?? "", out var n) ? Math.Max(0, n) : 0;
 
-    /// <summary>Estimated chests opened before the tool for the profile shown.</summary>
-    public static int InitialChests(TrackerData d, Config c) => InitialChests(c, Current(d, c)?.Key) + HistoryCompatibility.Reported(d, c).Chests;
+    /// <summary>Undated chests for the profile shown, included only in the complete history.</summary>
+    public static int InitialChests(TrackerData d, Config c)
+    {
+        if (c.CountFrom.HasValue) return 0;
+        return InitialChests(c, Current(d, c)?.Key) + HistoryCompatibility.Reported(d, c).Chests;
+    }
 
     public static string Describe(Profile p) =>
         $"{p.Name}  ({L.Count(p.Matches, "partida", "partidas", "match", "matches")}, {L.Count(p.Chests, "cofre", "cofres", "chest", "chests")})";

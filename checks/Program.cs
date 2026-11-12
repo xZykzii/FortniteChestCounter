@@ -28,6 +28,7 @@ internal static class CombinedChecks
         var (store, config, data) = Migration(snapshot, Path.Combine(scratch, "migration"));
         Totals(store, config, data);
         Filters(config, data);
+        UndatedTotals();
         InvalidFiles(Path.Combine(scratch, "invalid"));
         Roundtrip(store, config, data);
         if (args.Length > 2) Replay(args[2], data);
@@ -160,6 +161,46 @@ internal static class CombinedChecks
         Check(html.Contains("&lt;script&gt;"), "Team treasure details remain readable.");
         Check(ReplayAnalyzer.CurrentVersion == EXPECTED_ANALYZER, "Do not force reanalysis of preserved records.");
         Check(AppInfo.IsCombinedBuild, "Combined builds disable upstream replacement.");
+    }
+
+    private static void UndatedTotals()
+    {
+        var boundary = new DateTime(2026, 11, 12);
+        var before = new MatchRecord { EpicId = "one", PlayerName = "First", ChestsOpened = 30,
+            MatchStartUtc = boundary.AddTicks(-1).ToUniversalTime() };
+        var other = new MatchRecord { EpicId = "two", PlayerName = "Second", ChestsOpened = 99,
+            MatchStartUtc = boundary.ToUniversalTime() };
+        var imported = new ReportedTotals(25, 1050);
+        var history = new TrackerData
+        {
+            Matches = [before, other],
+            ReportedByProfile = new() { ["one"] = imported },
+        };
+        var config = new Config { Profile = "one", CountFrom = boundary, InitialChests = new() { ["one"] = 20 } };
+
+        var empty = Profiles.View(history, config);
+        var selected = Profiles.Current(history, config);
+        Check(selected is { Key: "one", Matches: 0, Chests: 0 }, "An empty date range retains the selected account.");
+        Check(empty.Matches.Count == 0 && HistoryCompatibility.Reported(empty) == default, "An empty period contains no undated totals or other profiles.");
+        Check(OverlayModel.Build(empty, null, false, Profiles.InitialChests(history, config)).Total == "0", "An empty date range displays zero chests.");
+        Check(HistoryCompatibility.Reported(history, config) == imported && Profiles.InitialChests(config, "one") == 20,
+            "The saved undated history remains available in settings.");
+
+        history.Matches.Add(new MatchRecord { EpicId = "one", PlayerName = "First", ChestsOpened = 10,
+            MatchStartUtc = boundary.ToUniversalTime() });
+        var period = Profiles.View(history, config);
+        var initial = Profiles.InitialChests(history, config);
+        Check(period.Matches.Count == 1 && period.Matches[0].ChestsOpened == 10, "Include local midnight, exclude earlier chests and other profiles.");
+        Check(initial == 0 && HistoryCompatibility.Average(period) == 10, "The period average and overlay exclude undated history.");
+        Check(Profiles.Current(history, config) is { Matches: 1, Chests: 10 }, "The profile selector uses filtered figures.");
+        var report = ReportWriter.Report(config, period, Profiles.List(history, config), initial);
+        Check(report.Contains("solo partidas con fecha") && !report.Contains("Otro PC:"), "The report explains the filtered totals.");
+
+        config.CountFrom = null;
+        var complete = Profiles.View(history, config);
+        Check(Profiles.InitialChests(history, config) == 1070 && HistoryCompatibility.Reported(complete) == imported, "Removing the filter restores undated totals.");
+        Check(Profiles.Current(history, config) is { Matches: 27, Chests: 1110 }, "The complete profile count is restored.");
+        Check(OverlayModel.Build(complete, null, false, Profiles.InitialChests(history, config)).Total == "1110", "The overlay restores the complete history.");
     }
 
     private static void InvalidFiles(string root)
