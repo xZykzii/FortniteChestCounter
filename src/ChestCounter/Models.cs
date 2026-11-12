@@ -312,6 +312,7 @@ public sealed class TrackerData
     public int Version { get; set; } = 1;
     public int AnalyzerVersion { get; set; } = 1;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+    public int PlaylistFilterVersion { get; set; }
     public List<MatchRecord> Matches { get; set; } = new();
 
     /// <summary>Key = file name|size|last write ticks. Value = session id, "skipped" or "error: ...".</summary>

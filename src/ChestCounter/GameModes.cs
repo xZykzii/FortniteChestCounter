@@ -3,8 +3,8 @@ using System.Text.RegularExpressions;
 namespace ChestCounter;
 
 /// <summary>
-/// Which matches count: regular Battle Royale (build or zero build) on the map of the current season, where the chest
-/// treasure hunt runs. Not counted: ranked, OG, Reload, Blitz and other limited-time modes, Creative / UEFN islands,
+/// Which matches count: Battle Royale (build or zero build, public or ranked) on the map of the current season.
+/// Not counted: OG, Reload, Blitz and other limited-time modes, Creative / UEFN islands,
 /// Lego, Festival, private (custom) matches.
 /// Two facts from the replay: the map, written in the replay header (readable at once, even while the match is being
 /// recorded), and the playlist (mode) sent by the server.
@@ -16,16 +16,22 @@ public static class GameModes
 
     /// <summary>
     /// Battle Royale playlists: Playlist_DefaultSolo / Duo / Trio / Squad (build), Playlist_Trios, Playlist_NoBuildBR_*
-    /// (zero build). Anything else is left out, even on the season map: ranked ("Habanero", Epic's code name), OG
-    /// ("Figment"), Reload, Blitz, LTMs...
+    /// (zero build), and their ranked variants (Habanero / Ranked). Other modes are excluded.
     /// </summary>
+    private const string TEAM_NAMES = "Solo|Duo|Duos|Trio|Trios|Squad|Squads";
     private static readonly Regex BattleRoyalePlaylist = new(
-        @"^Playlist_(Default(Solo|Duo|Duos|Trio|Trios|Squad|Squads)|Trios|NoBuildBR_(Solo|Duo|Duos|Trio|Trios|Squad|Squads))$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        $@"^Playlist_(Default({TEAM_NAMES})|Trios|NoBuildBR_({TEAM_NAMES})|(Habanero(BR|_NoBuildBR)?|Ranked(BR|NoBuildBR)?|NoBuildBR_Ranked)_({TEAM_NAMES}))$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static bool IsSeasonMap(string? map) => map != null && SeasonMaps.Any(m => map.Equals(m, StringComparison.OrdinalIgnoreCase));
 
-    public static bool IsBattleRoyalePlaylist(string? playlist) => playlist != null && BattleRoyalePlaylist.IsMatch(playlist);
+    public static bool IsBattleRoyalePlaylist(string? playlist)
+    {
+        if (string.IsNullOrWhiteSpace(playlist)) return false;
+        var name = playlist[(playlist.LastIndexOf('/') + 1)..];
+        name = name[(name.LastIndexOf('.') + 1)..];
+        return BattleRoyalePlaylist.IsMatch(name);
+    }
 
     /// <summary>
     /// True when the match counts. Matches saved by versions before 1.5 have no map: their playlist decides (they were
@@ -49,6 +55,6 @@ public static class GameModes
         {
             return L.T($"pas sur la carte de la saison ({mode}, carte {m.Map})", $"not on the season's map ({mode}, map {m.Map})", $"no es el mapa de la temporada ({mode}, mapa {m.Map})");
         }
-        return L.T($"pas le Battle Royale classique ({mode})", $"not the regular Battle Royale ({mode})", $"no es el Battle Royale normal ({mode})");
+        return L.T($"pas le Battle Royale de la saison ({mode})", $"not seasonal Battle Royale ({mode})", $"no es Battle Royale de la temporada ({mode})");
     }
 }

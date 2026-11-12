@@ -92,7 +92,7 @@ public sealed class SettingsForm : Form
             value => _monitor.Change(c => c.OpenReportOnStart = value));
         y = Toggle(page, "Minimizar a la bandeja", "El icono permite volver a abrir la ventana", y, _monitor.Config.MinimizeToTray,
             value => _monitor.Change(c => c.MinimizeToTray = value));
-        y = Toggle(page, "BR normal de la temporada", "Solo para partidas nuevas; conserva las guardadas", y, _monitor.Config.SeasonBattleRoyaleOnly,
+        y = Toggle(page, "BR de la temporada", "Incluye normales y clasificatorias; conserva las guardadas", y, _monitor.Config.SeasonBattleRoyaleOnly,
             value => _monitor.Change(c => c.SeasonBattleRoyaleOnly = value));
         y = Heading(page, "Equipo y conteo", "Los compañeros son un mínimo observado", y + 20);
         y = Toggle(page, "Mostrar compañeros", "Incluye el desglose y el ranking", y, _monitor.Config.ShowTeammates, _monitor.SetShowTeammates);

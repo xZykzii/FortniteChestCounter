@@ -9,6 +9,7 @@ internal static class SeasonChecks
         Chances(check);
         WeeklyEligibility(check);
         Modes(check);
+        RankedRecovery(check);
         Reports(check);
         Career(check);
     }
@@ -79,15 +80,42 @@ internal static class SeasonChecks
 
     private static void Modes(Action<bool, string> check)
     {
-        foreach (var playlist in new[] { "Playlist_DefaultSolo", "Playlist_DefaultDuo", "Playlist_NoBuildBR_Squad" })
+        foreach (var playlist in new[] { "Playlist_DefaultSolo", "Playlist_DefaultDuo", "Playlist_NoBuildBR_Squad",
+            "Playlist_Habanero_Solo", "Playlist_HabaneroBR_Duo", "Playlist_Habanero_NoBuildBR_Solo",
+            "Playlist_Ranked_Squad", "Playlist_RankedBR_Trio", "Playlist_RankedNoBuildBR_Duo", "Playlist_NoBuildBR_Ranked_Solo",
+            "/Game/Playlists/Playlist_HabaneroBR_Solo.Playlist_HabaneroBR_Solo" })
             check(GameModes.Counts(new MatchRecord { Playlist = playlist, Map = GameModes.SeasonMaps[0] }), "Regular seasonal BR is accepted.");
-        foreach (var playlist in new[] { "Playlist_Habanero_Solo", "Playlist_Figment_Solo", "Playlist_Reload_Squad", "Creative", "", "Playlist_DefaultSolo<script>" })
+        foreach (var playlist in new[] { "Playlist_Figment_Solo", "Playlist_Reload_Squad", "Creative", "", "Playlist_DefaultSolo<script>",
+            "Playlist_HabaneroBR_Solo_LTM", "Playlist_Ranked_Creative", "Playlist_RankedNoBuildBR_Duo_LTM" })
             check(!GameModes.Counts(new MatchRecord { Playlist = playlist }), "Non-event playlists are excluded from new tracking.");
         check(!GameModes.Counts(new MatchRecord { Playlist = "Playlist_DefaultSolo", IsCustomMatch = true }), "Custom matches are excluded.");
         var old = new MatchRecord { Playlist = "Playlist_Figment_Solo", ChestsOpened = 20, GameVersion = "v42.0", EpicId = "demo" };
         check(Profiles.View(new TrackerData { Matches = [old] }, new Config { Profile = "demo" }).Matches.Count == 1, "New-game mode rules do not hide stored historical matches.");
         check(!new MatchRecord { UnrecordedVehicleLoot = 2 }.HasVehicleChestsMissing, "Two isolated loot piles do not raise a vehicle warning.");
         check(new MatchRecord { UnrecordedVehicleLoot = 3 }.HasVehicleChestsMissing, "Three unexplained piles raise the documented vehicle warning.");
+    }
+
+    private static void RankedRecovery(Action<bool, string> check)
+    {
+        var store = new Store(Path.Combine(Path.GetTempPath(), "ChestRankedChecks-" + Guid.NewGuid().ToString("N")));
+        var match = new MatchRecord { SessionId = "stored", ChestsOpened = 17, AnalyzerVersion = ReplayAnalyzer.CurrentVersion };
+        var data = new TrackerData
+        {
+            AnalyzerVersion = ReplayAnalyzer.CurrentVersion,
+            Matches = [match],
+            ProcessedFiles = new() { ["ranked"] = "other mode", ["saved"] = "stored", ["intentional"] = "skipped", ["old"] = "older version" },
+        };
+        var tracker = new Tracker(store, new Config(), data);
+        check(!data.ProcessedFiles.ContainsKey("ranked"), "Previously excluded replays are eligible for the normal scan.");
+        check(data.ProcessedFiles["saved"] == "stored" && data.ProcessedFiles["intentional"] == "skipped" && data.ProcessedFiles["old"] == "older version", "Recovery preserves counted, intentionally skipped and unsupported-version entries.");
+        check(data.Matches.Single() == match && match.ChestsOpened == 17 && !tracker.UpgradeIfNeeded(), "Recovery preserves existing match counts and analysis.");
+        data.ProcessedFiles["creative"] = "other mode";
+        store.SaveData(data);
+        var loaded = store.LoadData();
+        _ = new Tracker(store, new Config(), loaded);
+        check(loaded.PlaylistFilterVersion > 0 && loaded.ProcessedFiles.ContainsKey("creative"), "The excluded-mode migration runs only once after persistence.");
+        check(!GameModes.Counts(new MatchRecord { Playlist = "Playlist_HabaneroBR_Solo", Map = "OtherMap" }), "Ranked still respects the season map.");
+        check(!GameModes.Counts(new MatchRecord { Playlist = "Playlist_HabaneroBR_Solo", IsCustomMatch = true }), "Custom ranked playlists remain excluded.");
     }
 
     private static void Reports(Action<bool, string> check)

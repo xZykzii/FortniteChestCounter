@@ -15,6 +15,7 @@ public sealed class Tracker
     /// <summary>Un replay terminado sin cambios desde hace este tiempo está completo seguro (replays de antes).</summary>
     private static readonly TimeSpan OldReplayAge = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan ParseTimeout = TimeSpan.FromMinutes(3);
+    private const int PLAYLIST_FILTER_VERSION = 1;
 
     private readonly Store _store;
     private readonly Config _config;
@@ -37,6 +38,21 @@ public sealed class Tracker
         if (_data.UpgradeNames())
         {
             try { _store.SaveData(_data); } catch { /* se guardará con el próximo cambio */ }
+        }
+        RecoverExcludedReplays();
+    }
+
+    private void RecoverExcludedReplays()
+    {
+        if (_data.PlaylistFilterVersion >= PLAYLIST_FILTER_VERSION) return;
+        foreach (var key in _data.ProcessedFiles.Where(kv => kv.Value == "other mode").Select(kv => kv.Key).ToList())
+            _data.ProcessedFiles.Remove(key);
+        _data.PlaylistFilterVersion = PLAYLIST_FILTER_VERSION;
+        try { _store.SaveData(_data); }
+        catch (Exception ex)
+        {
+            _data.PlaylistFilterVersion = 0;
+            ErrorLog.Write("No se pudo guardar la recuperación de clasificatorias", ex);
         }
     }
 

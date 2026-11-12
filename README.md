@@ -19,7 +19,7 @@ Contador de cofres para Windows con historial por perfil, informe de partidas, c
 - Compatibilidad con los historiales antiguos de ambas bases y registros manuales de otro PC, conservando los conteos personales.
 - Colección de premios, probabilidades por cofre, horarios locales de Treasure Hours y catálogo validado con imágenes incluidas para uso sin conexión.
 - Avisos de posible subconteo al usar vehículos y detección de cofres destruidos al romper su soporte.
-- Filtro opcional de BR normal de la temporada para partidas nuevas; conserva todas las partidas históricas.
+- Conteo de BR y Cero construcción de la temporada, tanto normales como clasificatorias. Conserva las partidas históricas y vuelve a revisar replays disponibles que el filtro anterior excluyó.
 - Bandeja del sistema, recuperación de la ventana al abrir otra instancia, confirmación de cierre, ayuda y estimación opcional desde Carrera.
 - OBS refleja HUD o clásico según el estilo elegido.
 - Actualización del ejecutable manual; el catálogo se puede actualizar desde este repositorio, sin enviar tus partidas.

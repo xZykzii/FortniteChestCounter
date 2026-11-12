@@ -7,7 +7,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>ChestCounter</AssemblyName>
     <RootNamespace>ChestCounter</RootNamespace>
-    <Version>2.4.0</Version>
+    <Version>2.4.1</Version>
     <InvariantGlobalization>false</InvariantGlobalization>
     <!-- Single-file publish: the parser discovers its types by reflection, so no trimming. -->
     <PublishTrimmed>false</PublishTrimmed>

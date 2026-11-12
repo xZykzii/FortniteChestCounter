@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.4.1
+
+- Se cuentan cofres de Battle Royale y Cero construcción clasificatorios de la temporada, incluidos los modos Habanero y Ranked.
+- Al actualizar se revisan una vez los replays disponibles que antes quedaron excluidos por el modo. Las partidas guardadas y las omisiones elegidas por el usuario se conservan.
+
 ## 2.4.0
 
 - Ajustes permite redimensionar y maximizar. La opción «Sumar tesoros del equipo» incluye los premios compartidos en los totales y la colección.
