@@ -7,9 +7,36 @@ internal static class SeasonChecks
     {
         Catalog(check);
         Chances(check);
+        WeeklyEligibility(check);
         Modes(check);
         Reports(check);
         Career(check);
+    }
+
+    private static void WeeklyEligibility(Action<bool, string> check)
+    {
+        var weeks = TreasureCatalog.Weeks;
+        var current = weeks.Single(w => w.Number == 2);
+        var previous = weeks.Single(w => w.Number == 1);
+        var zone = TimeZoneInfo.CreateCustomTimeZone("Chile in November", TimeSpan.FromHours(-3), "Chile", "Chile");
+        var saturday = new DateOnly(2026, 11, 7);
+        var sunday = saturday.AddDays(1);
+        (DateOnly? Day, long Chests)[] normal = [(saturday, 1050), (sunday, 30), (sunday.AddDays(1), 3), (null, 7), (saturday.AddMonths(-1), 9)];
+        DateTime[] times = [previous.From.AddTicks(-1), current.From.AddTicks(-1), current.From, current.To.AddTicks(-1), current.To, weeks.Max(w => w.To)];
+        var car = TreasureCatalog.Odds.Single(o => o.Kind == TreasureCatalog.VehicleDecal);
+        var newer = TreasureCatalog.EligibleAttempts(car, current, weeks, times, normal, zone);
+        check(newer.Timed.SequenceEqual(new[] { current.From, current.To.AddTicks(-1) }), "The current vehicle uses the inclusive start and exclusive end of its rotation.");
+        check(newer.Normal == 3, "Saturday's 1,050 and the rotation day without time are excluded from the current vehicle.");
+        var older = TreasureCatalog.EligibleAttempts(car, previous, weeks, times, normal, zone);
+        check(older.Normal == 1050 && older.Timed.Length == 1, "Saturday belongs to the previous vehicle's rotation.");
+        var inactive = TreasureCatalog.EligibleAttempts(car, null, weeks, times, normal, zone);
+        check(inactive.Timed.Length == 0 && inactive.Normal == 0, "A weekly reward has no eligible attempts without a rotation.");
+        foreach (var kind in new[] { TreasureCatalog.PirateShop, TreasureCatalog.Gizmo })
+        {
+            var odds = TreasureCatalog.Odds.Single(o => o.Kind == kind);
+            var season = TreasureCatalog.EligibleAttempts(odds, current, weeks, times, normal, zone);
+            check(season.Timed.Length == 4 && season.Normal == 1090, "Permanent prizes include both days and exclude dates outside the season: " + kind);
+        }
     }
 
     private static void Catalog(Action<bool, string> check)

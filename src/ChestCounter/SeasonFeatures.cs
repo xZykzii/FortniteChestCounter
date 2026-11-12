@@ -74,22 +74,40 @@ public static class SeasonFeatures
 
     private static void Chances(StringBuilder sb, TrackerData data, int initialChests, Config config)
     {
-        var matches = data.Matches;
-        OpenPanel(sb, "probabilidades", "Probabilidades", "Estimaciones del catálogo de LED-N 1.5.0. Cada cofre mantiene su probabilidad; el acumulado no garantiza un premio.");
-        var times = ChestTimes(matches);
-        var rawCount = matches.Sum(m => m.Chests.Count > 0 ? m.Chests.Count : Math.Max(0, m.OwnChests - config.ExtraKinds().Sum(m.Interactions)));
-        var plain = Math.Max(0, initialChests) + Math.Max(0, rawCount - times.Count);
-        sb.Append($"<p>{times.Count:N0} cofres con hora · {plain:N0} cofres sin hora, a tasa normal. Excluye cajas, cañones y cofres de compañeros.</p>");
-        var reported = HistoryCompatibility.Reported(data);
-        if (reported.Day is { } day)
-            sb.Append($"<p class=\"muted\">Otro PC: {reported.Chests:N0} cofres del {day:d}, sin hora de apertura.</p>");
-        sb.Append("<div class=\"table-wrap\"><table><thead><tr><th>Premio</th><th>Por cofre</th><th>Al menos una vez</th><th>50 % a tasa normal</th></tr></thead><tbody>");
+        OpenPanel(sb, "probabilidades", "Probabilidades", "Probabilidad estimada de haber obtenido cada premio con tus cofres elegibles. Excluye cajas, cañones y cofres de compañeros.");
+        var times = ChestTimes(data.Matches);
+        var normal = NormalAttempts(data, config, initialChests, times.Count);
+        var weeks = TreasureCatalog.Weeks;
+        var now = DateTime.UtcNow;
+        var week = weeks.Where(w => w.From <= now).MaxBy(w => w.From);
+        if (week != null)
+            sb.Append($"<p>Premios de la semana {week.Number} · {week.From.ToLocalTime():g} a {week.To.ToLocalTime():g}</p>");
+        foreach (var reported in data.ReportedByProfile.Values)
+        {
+            if (reported.Day is { } day)
+                sb.Append($"<p class=\"muted\">Otro PC: {reported.Chests:N0} cofres del {day:d}, sin hora de apertura. Tasa normal para los premios disponibles ese día.</p>");
+        }
+        sb.Append("<div class=\"table-wrap\"><table><thead><tr><th>Premio</th><th>Cofres elegibles</th><th>Por cofre</th><th>Al menos una vez</th><th>50 % a tasa normal</th></tr></thead><tbody>");
         foreach (var odds in TreasureCatalog.Odds)
         {
-            var chance = TreasureCatalog.AtLeastOnce(odds, times, plain);
-            sb.Append($"<tr><td>{H(TreasureCatalog.KindName(odds.Kind))}</td><td>1 / {odds.OneIn:N0}</td><td>{chance:P2}</td><td>{TreasureCatalog.ChestsFor(odds.OneIn, .5):N0}</td></tr>");
+            var (timed, plain) = TreasureCatalog.EligibleAttempts(odds, week, weeks, times, normal, TimeZoneInfo.Local);
+            var chance = TreasureCatalog.AtLeastOnce(odds, timed, plain);
+            var prize = odds.Weekly ? week?.Prizes.FirstOrDefault(p => p.Kind == odds.Kind)?.Name : "Toda la temporada";
+            var label = H(TreasureCatalog.KindName(odds.Kind));
+            if (prize != null) label += $"<br><small class=\"muted\">{H(prize)}</small>";
+            sb.Append($"<tr><td>{label}</td><td>{timed.LongLength + plain:N0}</td><td>1 / {odds.OneIn:N0}</td><td>{chance:P2}</td><td>{TreasureCatalog.ChestsFor(odds.OneIn, .5):N0}</td></tr>");
         }
-        sb.Append("</tbody></table></div><p class=\"muted\">Las horas previstas se aplican según el catálogo. Para premios semanales, este cálculo compara intentos de la categoría, no la obtención de un objeto concreto. Los registros manuales se calculan a tasa normal cuando no tienen hora de apertura.</p></section>");
+        sb.Append("</tbody></table></div><p class=\"muted\">Una fecha sin hora cuenta a tasa normal si todo ese día cae dentro del período del premio. Los cofres sin fecha solo se estiman para premios de toda la temporada.</p></section>");
+    }
+
+    private static List<(DateOnly? Day, long Chests)> NormalAttempts(TrackerData data, Config config, int initialChests, int timedCount)
+    {
+        var extras = config.ExtraKinds();
+        var rawCount = data.Matches.Sum(m => m.Chests.Count > 0 ? (long)m.Chests.Count : Math.Max(0, m.OwnChests - extras.Sum(m.Interactions)));
+        var normal = data.ReportedByProfile.Values.Select(t => (t.Day, Chests: (long)t.Chests)).ToList();
+        var estimated = Math.Max(0, initialChests - normal.Sum(t => t.Chests));
+        normal.Add((null, estimated + Math.Max(0, rawCount - timedCount)));
+        return normal;
     }
 
     private static void Collection(StringBuilder sb, List<MatchRecord> matches, string profile)

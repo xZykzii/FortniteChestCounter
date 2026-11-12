@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.3.9
+
+- Las probabilidades de premios semanales usan los cofres abiertos durante su rotación. El informe muestra el premio y los cofres elegibles de cada fila, con alcance de temporada para el token y los artilugios.
+- Un total manual con fecha usa la tasa normal si el día completo cae dentro del período del premio.
+
 ## 2.3.8
 
 - Los totales manuales de otro PC admiten un día opcional para los gráficos, el filtro por fecha y el CSV. Las probabilidades usan la tasa normal cuando se desconoce la hora.

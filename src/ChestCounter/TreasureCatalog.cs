@@ -253,6 +253,30 @@ public static class TreasureCatalog
     /// <summary>The week a moment falls in (null outside the hunt).</summary>
     public static TreasureWeek? WeekOf(DateTime utc) => Weeks.FirstOrDefault(w => utc >= w.From && utc < w.To);
 
+    public static (DateTime[] Timed, long Normal) EligibleAttempts(TreasureOdds odds, TreasureWeek? week,
+        IReadOnlyList<TreasureWeek> weeks, IEnumerable<DateTime> timesUtc,
+        IEnumerable<(DateOnly? Day, long Chests)> normal, TimeZoneInfo zone)
+    {
+        if (weeks.Count == 0 || (odds.Weekly && week == null)) return ([], 0);
+        var from = odds.Weekly ? week!.From : weeks.Min(w => w.From);
+        var to = odds.Weekly ? week!.To : weeks.Max(w => w.To);
+        var timed = timesUtc.Where(t => t >= from && t < to).ToArray();
+        var plain = normal.Where(n => n.Day is { } day ? IsDayWithin(day, from, to, zone) : !odds.Weekly)
+            .Sum(n => n.Chests);
+        return (timed, plain);
+    }
+
+    private static bool IsDayWithin(DateOnly day, DateTime from, DateTime to, TimeZoneInfo zone)
+    {
+        if (day == DateOnly.MaxValue) return false;
+        var start = day.ToDateTime(TimeOnly.MinValue);
+        var end = day.AddDays(1).ToDateTime(TimeOnly.MinValue);
+        if (zone.IsInvalidTime(start) || zone.IsInvalidTime(end) ||
+            zone.IsAmbiguousTime(start) || zone.IsAmbiguousTime(end)) return false;
+        return TimeZoneInfo.ConvertTimeToUtc(start, zone) >= from &&
+            TimeZoneInfo.ConvertTimeToUtc(end, zone) <= to;
+    }
+
     public static string KindName(string kind) => kind switch
     {
         GoldOutfit => L.T("Tenue en or", "Gold Outfit", "Traje de oro"),
