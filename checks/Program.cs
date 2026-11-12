@@ -30,6 +30,7 @@ internal static class CombinedChecks
         Totals(store, config, data);
         Filters(config, data);
         UndatedTotals();
+        DatedTotals();
         InvalidFiles(Path.Combine(scratch, "invalid"));
         Roundtrip(store, config, data);
         if (args.Length > 2) Replay(args[2], data);
@@ -228,6 +229,38 @@ internal static class CombinedChecks
         Check(Profiles.InitialChests(history, config) == 1070 && HistoryCompatibility.Reported(complete) == imported, "Removing the filter restores undated totals.");
         Check(Profiles.Current(history, config) is { Matches: 27, Chests: 1110 }, "The complete profile count is restored.");
         Check(OverlayModel.Build(complete, null, false, Profiles.InitialChests(history, config)).Total == "1110", "The overlay restores the complete history.");
+    }
+
+    private static void DatedTotals()
+    {
+        var day = new DateOnly(2026, 10, 10);
+        var local = day.ToDateTime(new TimeOnly(12, 0));
+        var imported = new ReportedTotals(3, 80) { Day = day };
+        var history = new TrackerData
+        {
+            Matches = [new MatchRecord { EpicId = "demo", ChestsOpened = 10, MatchStartUtc = local.ToUniversalTime() }],
+            ReportedByProfile = new() { ["demo"] = imported },
+        };
+        var config = new Config { Profile = "demo", CountFrom = local.Date };
+        var view = Profiles.View(history, config);
+        Check(HistoryCompatibility.Reported(view) == imported, "The filter includes the reported day at its start boundary.");
+        Check(Profiles.Current(history, config) is { Chests: 90, Matches: 4 }, "The profile counts dated records once.");
+        Check(HistoryCompatibility.DailyChests(view)[local.Date] == 90, "The aggregate is assigned to its day.");
+        Check(view.Matches.Count == 1 && SeasonFeatures.ChestTimes(view.Matches).Count == 0,
+            "A manual total creates neither replay matches nor opening timestamps.");
+        Check(Profiles.InitialChests(history, config) == imported.Chests, "The dated total enters odds as untimed chests.");
+        Check(ReportWriter.Csv(history).Contains("2026-10-10;Otro PC;"), "CSV shows the date without an invented time.");
+        var report = ReportWriter.Report(config, view, Profiles.List(history, config), Profiles.InitialChests(history, config));
+        Check(report.Contains("sin hora de apertura"), "The odds panel labels a dated record without an opening time.");
+        Check(OverlayModel.Build(view, null, false, Profiles.InitialChests(history, config)).Total == "90",
+            "The overlay includes the dated total once.");
+        config.CountFrom = local.Date.AddDays(1);
+        Check(HistoryCompatibility.Reported(Profiles.View(history, config)) == default && Profiles.InitialChests(history, config) == 0,
+            "A later cutoff excludes the dated aggregate.");
+        config.CountFrom = null;
+        Check(Profiles.Current(history, config) is { Chests: 90, Matches: 4 }, "Full history still includes the same aggregate.");
+        Check(JsonSerializer.Deserialize<ReportedTotals>(JsonSerializer.Serialize(imported)) == imported,
+            "The reported day round-trips as data.");
     }
 
     private static void InvalidFiles(string root)

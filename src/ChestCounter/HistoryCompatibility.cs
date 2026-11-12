@@ -6,7 +6,13 @@ using FortniteReplayReader.Models;
 
 namespace ChestCounter;
 
-public readonly record struct ReportedTotals(int Matches, int Chests);
+public readonly record struct ReportedTotals(int Matches, int Chests)
+{
+    public DateOnly? Day { get; init; }
+
+    public ReportedTotals ForPeriod(DateTime? from) =>
+        from is null || (Day is { } day && day >= DateOnly.FromDateTime(from.Value)) ? this : default;
+}
 public sealed record SquadmateChestCount(string? PlayerName, int ChestsOpened);
 
 /// <summary>Compatibility with the customized 1.4 history; never synthesizes replay matches.</summary>
@@ -109,8 +115,21 @@ public static class HistoryCompatibility
         }
     }
 
-    public static ReportedTotals Reported(TrackerData view) => new(
-        view.ReportedByProfile.Values.Sum(t => t.Matches), view.ReportedByProfile.Values.Sum(t => t.Chests));
+    public static ReportedTotals Reported(TrackerData view) => view.ReportedByProfile.Count == 1
+        ? view.ReportedByProfile.Values.First()
+        : new(view.ReportedByProfile.Values.Sum(t => t.Matches), view.ReportedByProfile.Values.Sum(t => t.Chests));
+
+    public static Dictionary<DateTime, int> DailyChests(TrackerData view)
+    {
+        var byDay = view.Matches.GroupBy(Profiles.Day).ToDictionary(g => g.Key, g => g.Sum(m => m.ChestsOpened));
+        foreach (var totals in view.ReportedByProfile.Values)
+        {
+            if (totals.Day is not { } date) continue;
+            var day = date.ToDateTime(TimeOnly.MinValue);
+            byDay[day] = byDay.GetValueOrDefault(day) + totals.Chests;
+        }
+        return byDay;
+    }
 
     public static ReportedTotals Reported(TrackerData data, Config config)
     {
@@ -128,10 +147,13 @@ public static class HistoryCompatibility
     public static string ReportedNote(TrackerData view)
     {
         var totals = Reported(view);
-        return totals.Matches == 0 ? "" : L.F(
-            "Otro PC: {0} cofres en {1} partidas. Incluidos en el total y la media; sin inventar fechas ni tesoros.",
-            "Other PC: {0} chests in {1} matches. Included in totals and averages, without invented dates or treasures.",
-            L.N(totals.Chests), L.N(totals.Matches));
+        if (totals.Matches == 0) return "";
+        var date = totals.Day is { } day
+            ? L.F(" del {0:d}", " on {0:d}", day)
+            : "";
+        return L.F("Otro PC: {0} cofres en {1} partidas{2}. Incluidos en el total y la media.",
+            "Other PC: {0} chests in {1} matches{2}. Included in totals and averages.",
+            L.N(totals.Chests), L.N(totals.Matches), date);
     }
 
     public static string TeamTreasures(IReadOnlyList<MatchRecord> matches)
@@ -156,7 +178,8 @@ public static class HistoryCompatibility
             var name = data.Matches.Where(m => Profiles.Key(m) == key).Select(m => m.PlayerName).FirstOrDefault() ?? "";
             name = name.Replace(';', ',').Replace('\r', ' ').Replace('\n', ' ');
             if (name.TrimStart().FirstOrDefault() is '=' or '+' or '-' or '@') name = "'" + name;
-            sb.AppendLine($";Otro PC;{name};;;{totals.Chests};;;reported-totals.json;{totals.Matches}");
+            var date = totals.Day?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            sb.AppendLine($"{date};Otro PC;{name};;;{totals.Chests};;;reported-totals.json;{totals.Matches}");
         }
         return sb.ToString();
     }

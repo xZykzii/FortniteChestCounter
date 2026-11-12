@@ -38,7 +38,7 @@ No lee la memoria del juego, no inyecta código y no modifica Fortnite. Una actu
 Los datos se guardan en `%APPDATA%\ChestCounter`. **No están incluidos en este repositorio ni en las descargas.**
 
 - `data.json`: partidas y recuentos.
-- `reported-totals.json`: registro manual por perfil de otro PC.
+- `reported-totals.json`: registro manual por perfil de otro PC. Admite el campo opcional `Day` con fecha ISO `AAAA-MM-DD` para el total de un día.
 - `config.json`: preferencias.
 - `treasures.json`: nombres de premios.
 - `backup-before-combined`: copia anterior a la primera migración.

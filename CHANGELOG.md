@@ -1,5 +1,9 @@
 # Cambios
 
+## 2.3.8
+
+- Los totales manuales de otro PC admiten un día opcional para los gráficos, el filtro por fecha y el CSV. Las probabilidades usan la tasa normal cuando se desconoce la hora.
+
 ## 2.3.7
 
 - Nuevo icono de Windows con cofre dorado simplificado y fondo opaco para que se distinga en la barra de tareas.

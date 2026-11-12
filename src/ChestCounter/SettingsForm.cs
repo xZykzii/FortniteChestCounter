@@ -152,7 +152,8 @@ public sealed class SettingsForm : Form
     private void BuildHistory(Panel page)
     {
         var reported = _monitor.ReportedTotals;
-        var note = reported.Matches > 0 ? $"Otro PC conservado: {reported.Chests} cofres en {reported.Matches} partidas" : "Cada partida se guarda aunque se borre su replay";
+        var date = reported.Day is { } day ? $" · {day:d}" : "";
+        var note = reported.Matches > 0 ? $"Otro PC: {reported.Chests} cofres en {reported.Matches} partidas{date}" : "Cada partida se guarda aunque se borre su replay";
         var y = Heading(page, "Tu historial", note, 0);
         TextAt(page, "Cofres anteriores adicionales", 10, 0, y, 320, 24);
         var initial = new NumericUpDown { Minimum = 0, Maximum = MAX_INITIAL, Value = Math.Clamp(_monitor.InitialChests, 0, MAX_INITIAL),

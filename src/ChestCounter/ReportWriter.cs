@@ -401,8 +401,8 @@ public static class ReportWriter
         var treasureRows = matches.SelectMany(m => m.TreasureFinds.Select(f => (m, f))).ToList();
         (string Html, int Count)? mates = config.ShowTeammates ? TeammatesPanel(matches, extraKinds, N) : null;
         var top10 = matches.Count(m => m.Placement is > 1 and <= 10);
-        var bestDay = matches.GroupBy(m => When(m).Date).Select(g => (Day: g.Key, Chests: g.Sum(m => m.ChestsOpened)))
-            .OrderByDescending(d => d.Chests).FirstOrDefault();
+        var dailyTotals = HistoryCompatibility.DailyChests(data);
+        var bestDay = dailyTotals.OrderByDescending(d => d.Value).FirstOrDefault();
 
         // ---- Pestañas ---------------------------------------------------------------------------------
         var tabs = new List<(string Id, string Label, string? Count)>
@@ -432,6 +432,7 @@ public static class ReportWriter
         if (config.CountFrom is { } from)
         {
             initialNote = H(L.F("Desde {0:d} · solo partidas con fecha", "Since {0:d} · dated matches only", from));
+            if (reported.Matches > 0) initialNote += " · " + H(HistoryCompatibility.ReportedNote(data));
         }
         else if (reported.Matches > 0)
         {
@@ -455,7 +456,7 @@ public static class ReportWriter
               </div>
               <div class="kpi"><div class="l">{L.T("Partidas", "Matches")}</div><div class="v">{N(totalMatches)}</div><div class="s">{(reported.Matches > 0 ? L.F("{0} locales + {1} otro PC", "{0} local + {1} other PC", N(matches.Count), N(reported.Matches)) : L.T("analizadas", "analyzed"))}</div></div>
               <div class="kpi"><div class="l">{L.T("Media", "Average")}</div><div class="v acc">{avg.ToString("0.0", Loc)}</div><div class="s">{L.T("cofres por partida", "chests per match")}</div></div>
-              <div class="kpi"><div class="l">{L.T("Récord", "Best match")}</div><div class="v">{N(best)}</div><div class="s">{(bestDay.Chests > 0 ? L.F("mejor día: {0} ({1})", "best day: {0} ({1})", N(bestDay.Chests), bestDay.Day.ToString(L.En ? "MMM d" : "dd/MM", Loc)) : L.T("cofres en una partida", "chests in one match"))}</div></div>
+              <div class="kpi"><div class="l">{L.T("Récord", "Best match")}</div><div class="v">{N(best)}</div><div class="s">{(bestDay.Value > 0 ? L.F("mejor día: {0} ({1})", "best day: {0} ({1})", N(bestDay.Value), bestDay.Key.ToString(L.En ? "MMM d" : "dd/MM", Loc)) : L.T("cofres en una partida", "chests in one match"))}</div></div>
               <div class="kpi"><div class="l">{L.T("Tesoros", "Treasures")}</div><div class="v ros">{N(treasures)}</div><div class="s">{L.T("encontrados", "found")}</div></div>
             </div>
             """);
@@ -463,7 +464,7 @@ public static class ReportWriter
         // Últimos 30 días: una barra por día, con escala y la media diaria.
         var today = DateTime.Now.Date;
         var days = Enumerable.Range(0, 30).Select(i => today.AddDays(i - 29)).ToList();
-        var perDay = days.Select(d => matches.Where(m => When(m).Date == d).Sum(m => m.ChestsOpened)).ToList();
+        var perDay = days.Select(d => dailyTotals.GetValueOrDefault(d)).ToList();
         var top = NiceMax(perDay.Max());
         var sum30 = perDay.Sum();
         var activeDays = perDay.Count(v => v > 0);

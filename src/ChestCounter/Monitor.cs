@@ -506,12 +506,7 @@ public sealed class Monitor
         var live = _tracker.IsLive && _tracker.LiveMatch != null && Profiles.Counted(_tracker.LiveMatch, _config) ? Profiles.Adjust(_tracker.LiveMatch, _config) : null;
         var today = DateTime.Now.Date;
 
-        var perDay = new Dictionary<DateTime, int>();
-        foreach (var m in matches)
-        {
-            var day = (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime().Date;
-            perDay[day] = perDay.GetValueOrDefault(day) + m.ChestsOpened;
-        }
+        var perDay = HistoryCompatibility.DailyChests(profileView);
         if (live != null)
         {
             perDay[today] = perDay.GetValueOrDefault(today) + live.ChestsOpened;
@@ -529,12 +524,10 @@ public sealed class Monitor
             BestDay: best?.Key,
             BestDayChests: best?.Value ?? 0)
         {
-            LastDays = BuildLastDays(today, live),
+            LastDays = BuildLastDays(today, perDay),
             HistoryMatches = matches.Count + reported.Matches,
             LastMatch = BuildLastMatch(),
-            HistorySince = Profiles.View(_data, _config).Matches
-                .Select(m => (DateTime?)(m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime().Date)
-                .Min(),
+            HistorySince = perDay.Keys.Select(day => (DateTime?)day).Min(),
         };
     }
 
@@ -577,20 +570,10 @@ public sealed class Monitor
     }
 
     /// <summary>Cofres de los últimos 7 días del perfil mostrado (todas sus partidas, no solo las 100 últimas).</summary>
-    private List<DayChests> BuildLastDays(DateTime today, MatchRecord? live)
+    private static List<DayChests> BuildLastDays(DateTime today, IReadOnlyDictionary<DateTime, int> sums)
     {
         const int days = 7;
         var first = today.AddDays(-(days - 1));
-        var sums = new Dictionary<DateTime, int>();
-        var all = Profiles.View(_data, _config).Matches.Append(live).OfType<MatchRecord>();
-        foreach (var m in all)
-        {
-            var day = (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime().Date;
-            if (day >= first && day <= today)
-            {
-                sums[day] = sums.GetValueOrDefault(day) + m.ChestsOpened;
-            }
-        }
         return Enumerable.Range(0, days)
             .Select(i => first.AddDays(i))
             .Select(d => new DayChests(d, sums.GetValueOrDefault(d)))

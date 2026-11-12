@@ -56,7 +56,7 @@ public static class SeasonFeatures
     {
         var sb = new StringBuilder();
         sb.Append("<style>" + Styles + "</style>");
-        Chances(sb, data.Matches, initialChests, config);
+        Chances(sb, data, initialChests, config);
         Collection(sb, data.Matches, config.Profile ?? Profiles.Current(data, config)?.Key ?? "");
         Events(sb, data.Matches);
         return sb.ToString();
@@ -72,20 +72,24 @@ public static class SeasonFeatures
         .SelectMany(m => m.Chests.Where(c => float.IsFinite(c.TimeSeconds) && c.TimeSeconds >= 0 && c.TimeSeconds <= MAX_MATCH_SECONDS)
             .Select(c => m.MatchStartUtc!.Value.AddSeconds(c.TimeSeconds))).ToList();
 
-    private static void Chances(StringBuilder sb, List<MatchRecord> matches, int initialChests, Config config)
+    private static void Chances(StringBuilder sb, TrackerData data, int initialChests, Config config)
     {
+        var matches = data.Matches;
         OpenPanel(sb, "probabilidades", "Probabilidades", "Estimaciones del catálogo de LED-N 1.5.0. Cada cofre mantiene su probabilidad; el acumulado no garantiza un premio.");
         var times = ChestTimes(matches);
         var rawCount = matches.Sum(m => m.Chests.Count > 0 ? m.Chests.Count : Math.Max(0, m.OwnChests - config.ExtraKinds().Sum(m.Interactions)));
         var plain = Math.Max(0, initialChests) + Math.Max(0, rawCount - times.Count);
-        sb.Append($"<p>{times.Count:N0} cofres con hora · {plain:N0} anteriores o sin hora, a tasa normal. Excluye cajas, cañones y cofres de compañeros.</p>");
+        sb.Append($"<p>{times.Count:N0} cofres con hora · {plain:N0} cofres sin hora, a tasa normal. Excluye cajas, cañones y cofres de compañeros.</p>");
+        var reported = HistoryCompatibility.Reported(data);
+        if (reported.Day is { } day)
+            sb.Append($"<p class=\"muted\">Otro PC: {reported.Chests:N0} cofres del {day:d}, sin hora de apertura.</p>");
         sb.Append("<div class=\"table-wrap\"><table><thead><tr><th>Premio</th><th>Por cofre</th><th>Al menos una vez</th><th>50 % a tasa normal</th></tr></thead><tbody>");
         foreach (var odds in TreasureCatalog.Odds)
         {
             var chance = TreasureCatalog.AtLeastOnce(odds, times, plain);
             sb.Append($"<tr><td>{H(TreasureCatalog.KindName(odds.Kind))}</td><td>1 / {odds.OneIn:N0}</td><td>{chance:P2}</td><td>{TreasureCatalog.ChestsFor(odds.OneIn, .5):N0}</td></tr>");
         }
-        sb.Append("</tbody></table></div><p class=\"muted\">Las horas previstas se aplican según el catálogo. Para premios semanales, este cálculo compara intentos de la categoría, no la obtención de un objeto concreto. Los cofres añadidos manualmente no tienen una fecha verificable.</p></section>");
+        sb.Append("</tbody></table></div><p class=\"muted\">Las horas previstas se aplican según el catálogo. Para premios semanales, este cálculo compara intentos de la categoría, no la obtención de un objeto concreto. Los registros manuales se calculan a tasa normal cuando no tienen hora de apertura.</p></section>");
     }
 
     private static void Collection(StringBuilder sb, List<MatchRecord> matches, string profile)

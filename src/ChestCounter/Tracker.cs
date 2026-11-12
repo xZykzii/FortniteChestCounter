@@ -563,9 +563,10 @@ public sealed class Tracker
         var key = Profiles.Key(m);
         var total = _data.Matches.Where(x => Profiles.Key(x) == key && Profiles.Counted(x, _config))
             .Sum(x => Profiles.Adjust(x, _config)!.ChestsOpened);
+        total += _data.ReportedByProfile.GetValueOrDefault(key).ForPeriod(_config.CountFrom).Chests;
         if (!_config.CountFrom.HasValue)
         {
-            total += Profiles.InitialChests(_config, key) + _data.ReportedByProfile.GetValueOrDefault(key).Chests;
+            total += Profiles.InitialChests(_config, key);
         }
         var when = (m.MatchStartUtc ?? m.AnalyzedAtUtc).ToLocalTime();
 

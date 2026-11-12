@@ -62,7 +62,7 @@ public static class Profiles
             var latest = history[0];
             var name = history.Select(m => m.PlayerName).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
             var chests = validMatches.Sum(m => (c != null ? Adjust(m, c)! : m).ChestsOpened);
-            var reported = c?.CountFrom == null ? d.ReportedByProfile.GetValueOrDefault(g.Key) : default;
+            var reported = d.ReportedByProfile.GetValueOrDefault(g.Key).ForPeriod(c?.CountFrom);
             var estimated = c is { CountFrom: null } ? InitialChests(c, g.Key) : 0;
             chests += reported.Chests + estimated;
             return new Profile(g.Key, name ?? L.T("Cuenta desconocida", "Unknown account"), validMatches.Count + reported.Matches, chests, When(latest));
@@ -86,6 +86,8 @@ public static class Profiles
     public static TrackerData View(TrackerData d, Config c)
     {
         var current = Current(d, c);
+        var key = current?.Key ?? c.Profile ?? "";
+        var reported = d.ReportedByProfile.GetValueOrDefault(key).ForPeriod(c.CountFrom);
         return new TrackerData
         {
             Version = d.Version,
@@ -93,9 +95,7 @@ public static class Profiles
             CreatedUtc = d.CreatedUtc,
             Matches = d.Matches.Where(m => (current == null || Key(m) == current.Key) && Counted(m, c)).Select(m => Adjust(m, c)!).ToList(),
             ProcessedFiles = d.ProcessedFiles,
-            ReportedByProfile = c.CountFrom.HasValue
-                ? new()
-                : new() { [current?.Key ?? c.Profile ?? ""] = HistoryCompatibility.Reported(d, c) },
+            ReportedByProfile = reported.Matches > 0 ? new() { [key] = reported } : new(),
         };
     }
 
@@ -113,11 +113,12 @@ public static class Profiles
     public static int InitialChests(Config c, string? key) =>
         c.InitialChests != null && c.InitialChests.TryGetValue(key ?? "", out var n) ? Math.Max(0, n) : 0;
 
-    /// <summary>Undated chests for the profile shown, included only in the complete history.</summary>
+    /// <summary>Chests without timestamps for the selected profile and period.</summary>
     public static int InitialChests(TrackerData d, Config c)
     {
-        if (c.CountFrom.HasValue) return 0;
-        return InitialChests(c, Current(d, c)?.Key) + HistoryCompatibility.Reported(d, c).Chests;
+        var key = Current(d, c)?.Key;
+        var estimated = c.CountFrom.HasValue ? 0 : InitialChests(c, key);
+        return estimated + d.ReportedByProfile.GetValueOrDefault(key ?? c.Profile ?? "").ForPeriod(c.CountFrom).Chests;
     }
 
     public static string Describe(Profile p) =>
