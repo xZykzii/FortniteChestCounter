@@ -24,6 +24,7 @@ internal static class CombinedChecks
         var scratch = Path.GetFullPath(args[1]);
         Directory.CreateDirectory(scratch);
         L.Use("es");
+        SeasonChecks.Run(Check);
         var (store, config, data) = Migration(snapshot, Path.Combine(scratch, "migration"));
         Totals(store, config, data);
         Filters(config, data);
@@ -206,7 +207,10 @@ internal static class CombinedChecks
         using var stream = File.OpenRead(file);
         var actual = new ReplayAnalyzer().Analyze(stream, file, null);
         var expected = history.Matches.Single(m => m.SessionId == actual.SessionId);
-        Check(actual.ChestsOpened == expected.ChestsOpened, "Reference replay chest count matches installed analyzer.");
+        Console.WriteLine($"Replay counts: saved={expected.ChestsOpened}, new={actual.ChestsOpened}, squad saved={expected.Squadmates?.Sum(t => t.ChestsOpened)}, new={actual.Squadmates?.Sum(t => t.ChestsOpened)}");
+        Check(actual.ChestsOpened >= expected.ChestsOpened, "The updated analysis retains or improves the reference chest count.");
+        Check(expected.Chests.All(old => actual.Chests.Any(c => c.TimeSeconds == old.TimeSeconds && c.Destroyed == old.Destroyed)), "All previously detected reference chests remain detected.");
+        Check(actual.Chests.Where(c => !expected.Chests.Any(old => old.TimeSeconds == c.TimeSeconds)).All(c => c.Destroyed), "Recovered chests were destroyed, not duplicate openings.");
         Check(actual.Squadmates!.Sum(t => t.ChestsOpened) == expected.Squadmates!.Sum(t => t.ChestsOpened), "Reference squad count unchanged.");
         Check(actual.Teammates!.Sum(t => t.ChestsSeen) == actual.Squadmates.Sum(t => t.ChestsOpened), "New teammate model agrees with preserved squad algorithm.");
         Check(actual.TreasureFinds.Count == expected.TreasureFinds.Count, "Preserve reference personal treasures.");

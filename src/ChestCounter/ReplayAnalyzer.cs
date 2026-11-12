@@ -3,6 +3,7 @@ using FortniteReplayReader;
 using FortniteReplayReader.Models;
 using FortniteReplayReader.Models.NetFieldExports;
 using FortniteReplayReader.Models.NetFieldExports.Items;
+using FortniteReplayReader.Models.NetFieldExports.Vehicles;
 using FortniteReplayReader.Models.NetFieldExports.Weapons;
 using Unreal.Core;
 using Unreal.Core.Contracts;
@@ -19,11 +20,30 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
 {
     /// <summary>Stale = state received with the channel itself (searched before it became relevant to the recorder).</summary>
     private sealed record SearchEvent(float Time, string ActorKey, string Label, uint? SearcherPawn, bool Destroyed = false, bool Stale = false);
-    private sealed record TossEvent(float Time, string Item);
+    /// <summary>Owner = the container the item was thrown out of (the server makes it the owner of the pickup).</summary>
+    private sealed record TossEvent(float Time, string Item, Pt? Loc, uint? Owner);
+
+    /// <summary>A position at a given time (world units: centimeters).</summary>
+    private readonly record struct Pt(float T, float X, float Y, float Z);
+
+    /// <summary>A player sitting in a vehicle: the vehicle's movement is then the player's.</summary>
+    private sealed class SeatSpan(uint pawn, uint vehicle, float from)
+    {
+        public uint Pawn { get; } = pawn;
+        public uint Vehicle { get; } = vehicle;
+        public float From { get; } = from;
+        public float To { get; set; } = float.MaxValue;
+    }
+
+    /// <summary>A closed chest destroyed with no instigator given by the server (its support was broken...).</summary>
+    private sealed record OrphanDestroy(float Time, string ActorKey, string Label, uint Actor);
+
+    private static readonly Regex VehicleClass = new(@"_Vehicle(_Static)?_C$|MeatballVehicle", RegexOptions.Compiled);
     private sealed record EquipEvent(float Time, string Item, uint Pawn);
     private sealed record PrizeEvent(float Time, string PrizeId, uint? Pawn, string Container);
 
-    private static readonly Regex PrizeIdPattern = new(@"[A-Za-z][A-Za-z0-9_]*:[A-Za-z0-9_.\-]+", RegexOptions.Compiled);
+    // "DelilahPrize:dpid_item4", or a bare GUID (the Pirate Shop Access token has no prefix).
+    private static readonly Regex PrizeIdPattern = new(@"[A-Za-z][A-Za-z0-9_]*:[A-Za-z0-9_.\-]+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOptions.Compiled);
 
     // Treasure hunt items do not drop on the ground: they go straight into the inventory.
     // They only show up in the replay when the player equips them (a weapon/gizmo actor is spawned).
@@ -66,6 +86,12 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 return GenericWeapon.GroupPath;
             }
 
+            // Cars, SUVs, carriages, boats: their movement is the movement of the players sitting in them.
+            if (VehicleClass.IsMatch(last))
+            {
+                return GenericVehicle.GroupPath;
+            }
+
             return path.Contains("/Containers/", StringComparison.OrdinalIgnoreCase)
                    || last.Contains("Chest", StringComparison.OrdinalIgnoreCase)
                 ? GenericContainer.GroupPath
@@ -90,6 +116,75 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
     private readonly Dictionary<uint, bool> _channelSearched = new();
     /// <summary>Who made the last recorded search of each container key.</summary>
     private readonly Dictionary<string, uint?> _lastOpener = new();
+
+    // Where everybody is: pawns on foot, vehicles, and who sits in which vehicle.
+    private readonly Dictionary<uint, List<Pt>> _pawnTrack = new();
+    private readonly Dictionary<uint, List<Pt>> _vehicleTrack = new();
+    private readonly List<SeatSpan> _seatSpans = new();
+    private readonly Dictionary<(uint Vehicle, int Seat), SeatSpan> _seated = new();
+    private readonly List<OrphanDestroy> _orphans = new();
+    private readonly HashSet<uint> _orphanChannels = new();
+    /// <summary>Containers the replay shows opened or destroyed (actor ids): the loot they dropped is explained.</summary>
+    private readonly HashSet<uint> _openedContainers = new();
+
+    private static void Track(Dictionary<uint, List<Pt>> tracks, uint id, FVector? location, float minInterval)
+    {
+        if (location == null)
+        {
+            return;
+        }
+        if (!tracks.TryGetValue(id, out var track))
+        {
+            tracks[id] = track = new List<Pt>();
+        }
+        if (track.Count == 0 || Now - track[^1].T >= minInterval)
+        {
+            track.Add(new Pt(Now, (float)location.X, (float)location.Y, (float)location.Z));
+        }
+    }
+
+    /// <summary>Position on a track at a given time (interpolated), or null when the track has nothing close in time.</summary>
+    private static Pt? At(List<Pt>? track, float t, float maxGap = 3f)
+    {
+        if (track == null || track.Count == 0)
+        {
+            return null;
+        }
+        int lo = 0, hi = track.Count - 1;
+        while (lo < hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (track[mid].T < t) lo = mid + 1; else hi = mid;
+        }
+        var after = track[lo];
+        if (lo == 0 || after.T <= t)
+        {
+            return Math.Abs(after.T - t) <= maxGap ? after : null;
+        }
+        var before = track[lo - 1];
+        if (after.T - before.T <= maxGap)
+        {
+            var f = (t - before.T) / (after.T - before.T);
+            return new Pt(t, before.X + (after.X - before.X) * f, before.Y + (after.Y - before.Y) * f, before.Z + (after.Z - before.Z) * f);
+        }
+        var nearest = t - before.T <= after.T - t ? before : after;
+        return Math.Abs(nearest.T - t) <= maxGap ? nearest : null;
+    }
+
+    /// <summary>Where a player's pawn is: in its vehicle while seated, on its own track otherwise.</summary>
+    private Pt? PositionOf(uint pawn, float t)
+    {
+        foreach (var span in _seatSpans)
+        {
+            if (span.Pawn == pawn && t >= span.From - 0.5f && t <= span.To + 0.5f && At(_vehicleTrack.GetValueOrDefault(span.Vehicle), t) is { } inVehicle)
+            {
+                return inVehicle;
+            }
+        }
+        return At(_pawnTrack.GetValueOrDefault(pawn), t);
+    }
+
+    private static float Distance(Pt a, Pt b) => MathF.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y) + (a.Z - b.Z) * (a.Z - b.Z));
     private static readonly string? Debug = Environment.GetEnvironmentVariable("CHESTCOUNTER_DEBUG");
 
     /// <summary>Level path or spawn location: the same container keeps the same key all match long.</summary>
@@ -387,23 +482,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         _lastSearcher.Remove(channelIndex);
         _equipChannelsSeen.Remove(channelIndex);
         _prizeChannelsSeen.Remove(channelIndex);
-    }
-
-    private bool CanCountDestroyedChest(uint channelIndex, string key, bool isStale, uint? searchAnimationCount)
-    {
-        if (_searched.Add(key))
-        {
-            return true;
-        }
-
-        if (_channelSearched.TryGetValue(channelIndex, out var hasBeenSearched))
-        {
-            return !hasBeenSearched;
-        }
-
-        // A refilled chest can reopen its channel with the default unsearched state omitted.
-        // A new loot animation and explicit destruction after channel open confirm the new interaction.
-        return !isStale && searchAnimationCount is > 0;
+        _orphanChannels.Remove(channelIndex);
     }
 
     /// <summary>Extracts "DelilahPrize:dpid_item4" from the raw property bits (FString inside a struct).</summary>
@@ -461,6 +540,10 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                         _lastOpener[containerKey] = openedBy;
                         _searches.Add(new SearchEvent(Now, containerKey, containerLabel, openedBy, Stale: stale));
                     }
+                    if (Channels[channelIndex]?.ActorId is uint openedActor)
+                    {
+                        _openedContainers.Add(openedActor);
+                    }
                     else if (Debug == "1")
                     {
                         Console.Error.WriteLine($"DBG seen-again {Now,7:F1}s {containerLabel} {containerKey}");
@@ -475,6 +558,43 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                     _channelSearched[channelIndex] = true;
                     _lastOpener[containerKey] = destroyer;
                     _searches.Add(new SearchEvent(Now, containerKey, containerLabel, destroyer, Destroyed: true, Stale: stale));
+                }
+                if (container.bDestroyed && Channels[channelIndex]?.ActorId is uint brokenActor)
+                {
+                    _openedContainers.Add(brokenActor);
+                }
+                if (container.bDestroyed && container.SearchingPawn is null or 0 && !stale && StableKey(containerKey)
+                    && (!_searched.Contains(containerKey) || (_channelSearched.TryGetValue(channelIndex, out var opened) && !opened))
+                    && Channels[channelIndex]?.ActorId is uint orphanActor && _orphanChannels.Add(channelIndex))
+                {
+                    // A closed chest destroyed without an instigator (its support was broken, it fell...). Who did it is
+                    // worked out at the end, from the loot that spilled and who stood right there (ResolveOrphans).
+                    _orphans.Add(new OrphanDestroy(Now, containerKey, containerLabel, orphanActor));
+                }
+                break;
+
+            case GenericVehicle vehicle when vehicle.ReplicatedMovement is { } vehicleMove && Channels[channelIndex]?.ActorId is uint movingVehicle:
+                Track(_vehicleTrack, movingVehicle, vehicleMove.Location, 0.25f);
+                break;
+
+            case SeatComponent seats when seats.PlayerSlots != null && Channels[channelIndex]?.ActorId is uint seatVehicle:
+                // Only the seats that changed carry a value: a pawn (someone sat down) or 0 (the seat was left).
+                for (var seat = 0; seat < seats.PlayerSlots.Length; seat++)
+                {
+                    if (seats.PlayerSlots[seat]?.Player is not uint occupant)
+                    {
+                        continue;
+                    }
+                    if (_seated.Remove((seatVehicle, seat), out var leaving))
+                    {
+                        leaving.To = Now;
+                    }
+                    if (occupant != 0)
+                    {
+                        var span = new SeatSpan(occupant, seatVehicle, Now);
+                        _seated[(seatVehicle, seat)] = span;
+                        _seatSpans.Add(span);
+                    }
                 }
                 break;
 
@@ -519,15 +639,24 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
                 }
                 if (!string.IsNullOrEmpty(item))
                 {
-                    _tosses.Add(new TossEvent(Now, item));
+                    // The pickup is spawned where the container stands, then flies to where it lands.
+                    var spawn = Channels[channelIndex]?.Actor?.Location;
+                    _tosses.Add(new TossEvent(Now, item, spawn == null ? null : new Pt(Now, (float)spawn.X, (float)spawn.Y, (float)spawn.Z), pickup.Owner));
                 }
                 break;
 
-            case PlayerPawn pawn when pawn.PlayerState is uint ps && ps != 0:
+            case PlayerPawn pawn:
                 var pawnId = Channels[channelIndex]?.ActorId;
                 if (pawnId != null)
                 {
-                    _pawnToPlayerState[pawnId.Value] = ps;
+                    if (pawn.PlayerState is uint ps && ps != 0)
+                    {
+                        _pawnToPlayerState[pawnId.Value] = ps;
+                    }
+                    if (pawn.ReplicatedMovement is { } pawnMove)
+                    {
+                        Track(_pawnTrack, pawnId.Value, pawnMove.Location, 0.5f);
+                    }
                 }
                 break;
 
@@ -542,6 +671,10 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         }
     }
 
+    /// <summary>
+    /// Parses <paramref name="file"/> and returns what the tracked player did with chests.
+    /// </summary>
+    /// <param name="username">Epic display name to track. If null/empty or not found, the replay owner is used.</param>
     private List<SquadmateChestCount>? CountSquadmates(IReadOnlyList<PlayerData> players, PlayerData? target, HashSet<uint> targetPawns)
     {
         if (target?.Id is not > 0 || target.TeamIndex is not > 0)
@@ -601,10 +734,24 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         }).OrderByDescending(t => t.ChestsSeen).ToList();
     }
 
-    /// <summary>
-    /// Parses <paramref name="file"/> and returns what the tracked player did with chests.
-    /// </summary>
-    /// <param name="username">Epic display name to track. If null/empty or not found, the replay owner is used.</param>
+    private bool CanCountDestroyedChest(uint channelIndex, string key, bool isStale, uint? searchAnimationCount)
+    {
+        if (_searched.Add(key))
+        {
+            return true;
+        }
+
+        if (_channelSearched.TryGetValue(channelIndex, out var hasBeenSearched))
+        {
+            return !hasBeenSearched;
+        }
+
+        // A refilled chest can reopen its channel with the default unsearched state omitted.
+        // A new loot animation and explicit destruction after channel open confirm the new interaction.
+        return !isStale && searchAnimationCount is > 0;
+    }
+
+
     public MatchRecord Analyze(Stream stream, string file, string? username)
     {
         var replay = ReadReplay(stream);
@@ -668,6 +815,7 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
         // --- Everything the target searched / interacted with ------------------------------------
         // A stale search of a stable container is real (old searches seen again were dropped, and the target was right
         // there: dormant ammo box, chest broken...). A stale search of a container without identity is not counted.
+        ResolveOrphans();
         var interactions = _searches
             .Where(s => s.SearcherPawn is uint p && targetPawns.Contains(p) && (!s.Stale || StableKey(s.ActorKey)))
             .OrderBy(s => s.Time)
@@ -786,6 +934,30 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             }
         }
         var hasTeam = target?.TeamIndex is int ti && players.Any(p => p.TeamIndex == ti && p.Id != target.Id);
+
+        // Chests of each teammate, counted exactly like the player's own (same events, same rules). The only limit
+        // is what the replay holds: a chest is recorded when it is within about 150 m of the recording player, or
+        // when that player comes by later while it still shows who searched it.
+        var teamChests = new List<TeamChestCount>();
+        if (target?.TeamIndex is int squad)
+        {
+            foreach (var mate in players.Where(p => p.TeamIndex == squad && p.Id != target.Id))
+            {
+                var matePawns = teammatePawns.Keys.Where(k => _pawnToPlayerState.TryGetValue(k, out var mps) && _playerStateToPlayerId.GetValueOrDefault(mps, -1) == mate.Id).ToHashSet();
+                var mateChests = _searches
+                    .Where(s => s.SearcherPawn is uint p && matePawns.Contains(p) && (!s.Stale || StableKey(s.ActorKey)) && ChestKinds.IsChest(ChestKinds.Classify(s.Label)))
+                    .ToList();
+                teamChests.Add(new TeamChestCount
+                {
+                    Name = mate.PlayerName ?? "",
+                    EpicId = mate.EpicId,
+                    IsBot = mate.IsBot,
+                    Chests = mateChests.Count,
+                    Destroyed = mateChests.Count(s => s.Destroyed),
+                });
+            }
+        }
+        var (vehicleSeconds, vehicleMeters, unrecordedLoot) = VehicleRuns(targetPawns);
         var teamFinds = new List<TreasureFind>();
         foreach (var pz in _prizes.Where(p => p.Pawn is uint pawn && teammatePawns.ContainsKey(pawn)))
         {
@@ -918,6 +1090,22 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             Console.Error.WriteLine($"DBG searches enemy={enemy} mates={mates} duration={replay.Info?.LengthInMs / 1000} goldenEnemy={goldenEnemy} team={teammatePawns.Count}");
         }
         teamFinds.Sort((a, b) => (a.ObtainedAtSeconds ?? float.MaxValue).CompareTo(b.ObtainedAtSeconds ?? float.MaxValue));
+
+        // Golden chests of everybody else in reach: the server sends the animated chest, with its prize and the pawn that
+        // opened it, to every player around (same as for the player's own).
+        var seen = new List<SeenPrize>();
+        foreach (var pz in _prizes.Where(p => p.Pawn is uint pawn && !targetPawns.Contains(pawn) && !teammatePawns.ContainsKey(pawn)))
+        {
+            var who = _pawnToPlayerState.TryGetValue(pz.Pawn!.Value, out var ops) && _playerStateToPlayerId.TryGetValue(ops, out var opid)
+                ? players.FirstOrDefault(p => p.Id == opid)
+                : null;
+            seen.Add(new SeenPrize
+            {
+                Player = who?.PlayerName ?? (who?.IsBot == true ? "Bot" : L.T("joueur inconnu", "unknown player", "jugador desconocido")),
+                PrizeId = pz.PrizeId,
+                TimeSeconds = MathF.Round(pz.Time, 1),
+            });
+        }
         finds.Sort((a, b) => (a.ObtainedAtSeconds ?? float.MaxValue).CompareTo(b.ObtainedAtSeconds ?? float.MaxValue));
 
         var info = replay.Info;
@@ -949,11 +1137,165 @@ public sealed class ReplayAnalyzer : FortniteReplayReader.ReplayReader
             OtherContainersOpened = others.Where(kv => kv.Key != ChestKinds.AmmoBox).Sum(kv => kv.Value),
             OtherInteractions = others,
             AnalyzerVersion = CurrentVersion,
-            IsBattleRoyale = !string.IsNullOrEmpty(replay.GameData?.CurrentPlaylist) || chests.Count > 0,
+            Map = header?.LevelNamesAndTimes?.Select(l => l.Item1).FirstOrDefault(l => !string.IsNullOrEmpty(l)),
+            IsCustomMatch = replay.GameData?.IsCustomMatch == true,
             Chests = chests,
             TreasureFinds = finds,
             TeamTreasureFinds = teamFinds,
+            SeenPrizes = seen,
+            TeamChests = teamChests,
+            TeamChestsOpened = teamChests.Sum(t => t.Chests),
+            VehicleSeconds = vehicleSeconds,
+            VehicleMeters = vehicleMeters,
+            UnrecordedVehicleLoot = unrecordedLoot,
         };
+    }
+
+    /// <summary>
+    /// Gives each closed chest destroyed without an instigator to the player who stood right at it when its loot
+    /// spilled (within 4.5 m, nobody closer). The loot is the chest's own for sure: the server makes the container
+    /// the owner of the pickups it throws out, which also tells where a level placed chest stands. Measured on 99
+    /// replays: a player's own chests spill their loot at 1 to 4 m (2 m median); in every such case looked at, the
+    /// player had just broken a prop next to the chest.
+    /// </summary>
+    private void ResolveOrphans()
+    {
+        foreach (var orphan in _orphans)
+        {
+            var loot = _tosses.Where(x => x.Loc != null && x.Owner == orphan.Actor && Math.Abs(x.Time - orphan.Time) <= 2f).Select(x => x.Loc!.Value).ToList();
+            if (loot.Count == 0)
+            {
+                continue;
+            }
+
+            uint nearest = 0;
+            var nearestDistance = 450f;
+            foreach (var pawn in _pawnToPlayerState.Keys)
+            {
+                if (PositionOf(pawn, orphan.Time) is not { } at)
+                {
+                    continue;
+                }
+                var d = loot.Min(l => Distance(at, l));
+                if (d < nearestDistance)
+                {
+                    nearestDistance = d;
+                    nearest = pawn;
+                }
+            }
+            if (nearest == 0)
+            {
+                continue;
+            }
+
+            if (Debug == "1")
+            {
+                Console.Error.WriteLine($"DBG orphan {orphan.Time,7:F1}s {orphan.Label} nearest pawn {nearest} at {nearestDistance / 100:F1} m");
+            }
+            if (_searched.Add(orphan.ActorKey + "#orphan" + orphan.Time.ToString("F0")))
+            {
+                _searches.Add(new SearchEvent(orphan.Time, orphan.ActorKey, orphan.Label, nearest, Destroyed: true));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Time and distance the player spent in vehicles, and the loot piles found along those drives that no recorded
+    /// container explains. Fortnite sometimes does not record what a fast vehicle destroys (the chests then show up
+    /// intact in its own replay viewer): the chests are not in the replay and cannot be counted, but the loot left
+    /// behind shows that something is missing.
+    /// </summary>
+    private (int Seconds, int Meters, int UnrecordedLoot) VehicleRuns(HashSet<uint> pawns)
+    {
+        var path = new List<Pt>();
+        var seconds = 0f;
+        var centimeters = 0f;
+        foreach (var span in _seatSpans.Where(s => pawns.Contains(s.Pawn)))
+        {
+            var points = (_vehicleTrack.GetValueOrDefault(span.Vehicle) ?? new List<Pt>()).Where(p => p.T >= span.From && p.T <= span.To).ToList();
+            if (points.Count < 2)
+            {
+                continue;
+            }
+            seconds += points[^1].T - points[0].T;
+            for (var i = 1; i < points.Count; i++)
+            {
+                var step = Distance(points[i - 1], points[i]);
+                centimeters += step;
+                // One point per meter, so that a pile next to the road is never between two points.
+                var parts = Math.Max(1, (int)(step / 100));
+                for (var k = 0; k < parts; k++)
+                {
+                    var f = (float)k / parts;
+                    path.Add(new Pt(points[i - 1].T + (points[i].T - points[i - 1].T) * f,
+                        points[i - 1].X + (points[i].X - points[i - 1].X) * f,
+                        points[i - 1].Y + (points[i].Y - points[i - 1].Y) * f,
+                        points[i - 1].Z + (points[i].Z - points[i - 1].Z) * f));
+                }
+            }
+        }
+        if (path.Count == 0)
+        {
+            return (0, 0, 0);
+        }
+
+        // Loot that appeared within 9 m of the drive, not before the vehicle got there (PassedAt = when it did).
+        // A pickup lying on the ground is sent again each time the player comes back near it, still marked as tossed
+        // from a container: only its first appearance counts. Otherwise the loot of a chest opened long before looks,
+        // on the next drive past it, like a chest the vehicle broke.
+        var seen = new Dictionary<string, List<Pt>>();
+        var near = new List<(Pt Loc, string Item, float PassedAt, uint? Owner)>();
+        foreach (var toss in _tosses.Where(t => t.Loc != null))
+        {
+            var loc = toss.Loc!.Value;
+            if (!seen.TryGetValue(toss.Item, out var spots))
+            {
+                seen[toss.Item] = spots = new();
+            }
+            var sentAgain = spots.Any(s => Distance(s, loc) < 150);
+            spots.Add(loc);
+            if (sentAgain)
+            {
+                continue;
+            }
+            var best = float.MaxValue;
+            var passedAt = 0f;
+            foreach (var p in path)
+            {
+                var d = Distance(p, loc);
+                if (d < best)
+                {
+                    best = d;
+                    passedAt = p.T;
+                }
+            }
+            if (best < 900 && toss.Time >= passedAt - 1)
+            {
+                near.Add((loc, toss.Item, passedAt, toss.Owner));
+            }
+        }
+
+        // Piles (items within 5 m of each other) holding more than ammo, with no container searched or destroyed
+        // by anyone when the vehicle went by, and not dropped by a container the replay shows opened (a chest opened
+        // by someone just after the drive).
+        var piles = new List<List<(Pt Loc, string Item, float PassedAt, uint? Owner)>>();
+        foreach (var item in near)
+        {
+            var pile = piles.FirstOrDefault(p => p.Any(o => Distance(o.Loc, item.Loc) < 500));
+            if (pile == null)
+            {
+                piles.Add(pile = new());
+            }
+            pile.Add(item);
+        }
+        var unexplained = piles.Count(p => p.Any(i => !i.Item.StartsWith("AthenaAmmoData", StringComparison.OrdinalIgnoreCase))
+            && !p.Any(i => i.Owner is uint o && (_openedContainers.Contains(o) || _orphans.Any(x => x.Actor == o)))
+            && !_searches.Any(s => Math.Abs(s.Time - p[0].PassedAt) <= 4));
+        if (Debug == "1")
+        {
+            Console.Error.WriteLine($"DBG vehicle {seconds:F0}s {centimeters / 100:F0}m piles={piles.Count} unexplained={unexplained}");
+        }
+        return ((int)seconds, (int)(centimeters / 100), unexplained);
     }
 }
 
@@ -977,6 +1319,7 @@ public static class TreasureNames
             {
                 return name;
             }
+            if (TreasureCatalog.Find(item) is { } prize) return prize.Name;
             if (unknown)
             {
                 // Same treasure under the other prefix (named by the player with an older version, or re-analyzed).

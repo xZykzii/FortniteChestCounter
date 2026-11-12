@@ -1,0 +1,264 @@
+{
+  "schema": 1,
+  "revision": 1,
+  "updated": "2026-11-11",
+  "about": "Treasure hunt data shown by Chest Counter (report, odds, collection). Edit it on main and raise 'revision': every counter picks it up at its next start. Schema in src/ChestCounter/TreasureCatalog.cs.",
+  "odds": [
+    {
+      "kind": "outfit",
+      "oneIn": 1562500,
+      "weekly": true
+    },
+    {
+      "kind": "pirate-shop",
+      "oneIn": 137500,
+      "weekly": false
+    },
+    {
+      "kind": "car",
+      "oneIn": 7813,
+      "weekly": true
+    },
+    {
+      "kind": "pickaxe",
+      "oneIn": 568,
+      "weekly": true
+    },
+    {
+      "kind": "jam",
+      "oneIn": 391,
+      "weekly": true
+    },
+    {
+      "kind": "loading",
+      "oneIn": 272,
+      "weekly": true
+    },
+    {
+      "kind": "gizmo",
+      "oneIn": 127,
+      "weekly": false
+    }
+  ],
+  "pirateShop": {
+    "id": "pirate-shop",
+    "kind": "pirate-shop",
+    "name": "Pirate Shop Access",
+    "image": "https://cdn.fortnite.bot/s43treasure/token.webp",
+    "prizeIds": [
+      "9f73f94d-2e61-4523-97d7-d61235d3365e"
+    ]
+  },
+  "weeks": [
+    {
+      "number": 1,
+      "start": "2026-11-01T14:00:00Z",
+      "end": "2026-11-08T14:00:00Z",
+      "title": "A$AP Arrives",
+      "prizes": [
+        {
+          "id": "w1-outfit",
+          "kind": "outfit",
+          "name": "Solid Gold A$AP Rocky",
+          "image": "https://cdn.fortnite.bot/s43treasure/w1-outfit.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item1"
+          ]
+        },
+        {
+          "id": "w1-pickaxe",
+          "kind": "pickaxe",
+          "name": "Solid Gold A$AP Rocky's Gauntlets",
+          "image": "https://cdn.fortnite.bot/s43treasure/w1-pickaxe.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item2"
+          ]
+        },
+        {
+          "id": "w1-car",
+          "kind": "car",
+          "name": "Gold Mercedes-AMG G 63 Decal",
+          "image": "https://cdn.fortnite.bot/s43treasure/w1-car.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item5"
+          ]
+        },
+        {
+          "id": "w1-jam",
+          "kind": "jam",
+          "name": "No Trespassing",
+          "image": "https://cdn.fortnite.bot/s43treasure/w1-jam.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item3"
+          ]
+        },
+        {
+          "id": "w1-loading",
+          "kind": "loading",
+          "name": "Plunder in Paradise",
+          "image": "https://cdn.fortnite.bot/s43treasure/w1-loading.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item4"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "start": "2026-11-08T14:00:00Z",
+      "end": "2026-11-15T14:00:00Z",
+      "title": "Lil Uzi Arrives",
+      "prizes": [
+        {
+          "id": "w2-outfit",
+          "kind": "outfit",
+          "name": "Solid Gold Lil Uzi Vert",
+          "image": "https://cdn.fortnite.bot/s43treasure/w2-outfit.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item14"
+          ]
+        },
+        {
+          "id": "w2-backbling",
+          "kind": "pickaxe",
+          "name": "Diamond and Gold",
+          "image": "https://cdn.fortnite.bot/s43treasure/w2-backbling.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item15"
+          ]
+        },
+        {
+          "id": "w2-car",
+          "kind": "car",
+          "name": "Gold Cadillac CT5-V Decal",
+          "image": "https://cdn.fortnite.bot/s43treasure/w2-car.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item18"
+          ]
+        },
+        {
+          "id": "w2-jam",
+          "kind": "jam",
+          "name": "London",
+          "image": "https://cdn.fortnite.bot/s43treasure/w2-jam.webp",
+          "prizeIds": [
+            "DelilahPrize:dpid_item16"
+          ]
+        },
+        {
+          "id": "w2-loading",
+          "kind": "loading",
+          "name": "So Kawaii",
+          "image": "https://cdn.fortnite.bot/s43treasure/w2-loading.webp?v=3",
+          "prizeIds": [
+            "DelilahPrize:dpid_item17"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "start": "2026-11-15T14:00:00Z",
+      "end": "2026-11-22T14:00:00Z",
+      "title": "Miku & Teto Arrive",
+      "prizes": []
+    },
+    {
+      "number": 4,
+      "start": "2026-11-22T14:00:00Z",
+      "end": "2026-11-29T14:00:00Z",
+      "title": "Oscar Arrives",
+      "prizes": []
+    },
+    {
+      "number": 5,
+      "start": "2026-11-29T14:00:00Z",
+      "end": "2026-12-05T14:00:00Z",
+      "title": "The Final Hunt",
+      "prizes": []
+    }
+  ],
+  "treasureHours": [
+    {
+      "start": "2026-11-07T19:00:00Z",
+      "end": "2026-11-07T21:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": true
+    },
+    {
+      "start": "2026-11-08T02:00:00Z",
+      "end": "2026-11-08T04:00:00Z",
+      "boosts": {
+        "outfit": 10,
+        "pirate-shop": 2,
+        "car": 10
+      },
+      "confirmed": true
+    },
+    {
+      "start": "2026-11-14T19:00:00Z",
+      "end": "2026-11-14T21:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": false
+    },
+    {
+      "start": "2026-11-15T02:00:00Z",
+      "end": "2026-11-15T04:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": false
+    },
+    {
+      "start": "2026-11-21T19:00:00Z",
+      "end": "2026-11-21T21:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": false
+    },
+    {
+      "start": "2026-11-22T02:00:00Z",
+      "end": "2026-11-22T04:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": false
+    },
+    {
+      "start": "2026-11-28T19:00:00Z",
+      "end": "2026-11-28T21:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": false
+    },
+    {
+      "start": "2026-11-29T02:00:00Z",
+      "end": "2026-11-29T04:00:00Z",
+      "boosts": {
+        "outfit": 7.5,
+        "pirate-shop": 1.5,
+        "car": 10
+      },
+      "confirmed": false
+    }
+  ],
+  "notices": []
+}

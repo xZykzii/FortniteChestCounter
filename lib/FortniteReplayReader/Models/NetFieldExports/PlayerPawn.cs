@@ -43,7 +43,7 @@ public class PlayerPawn : INetFieldExportGroup
     [NetFieldExport("RemoteRole", RepLayoutCmdType.Ignore)]
     public int? RemoteRole { get; set; }
 
-    [NetFieldExport("ReplicatedMovement", RepLayoutCmdType.RepMovement, ParseMode.Full)]
+    [NetFieldExport("ReplicatedMovement", RepLayoutCmdType.RepMovement, ParseMode.Minimal)]
     public FRepMovement? ReplicatedMovement { get; set; }
 
     [NetFieldExport("AttachParent", RepLayoutCmdType.Ignore)]

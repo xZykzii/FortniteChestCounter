@@ -513,7 +513,9 @@ public class NetFieldParser
             }
         }
 
-        if (replayout == RepLayoutCmdType.Ignore)
+        // ChestCounter patch: an array whose elements are the group's own type (struct fields flattened into the
+        // group, e.g. the seats of a vehicle) has no primitive layout: it was always skipped here.
+        if (replayout == RepLayoutCmdType.Ignore && !isGroupType)
         {
             return null;
         }

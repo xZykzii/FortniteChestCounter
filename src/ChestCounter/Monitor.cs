@@ -68,6 +68,7 @@ public sealed class Monitor
     private readonly string _dataDir;
     private readonly AutoResetEvent _wake = new(false);
     private FileSystemWatcher? _watcher;
+    private System.Threading.Timer? _contentTimer;
     private volatile bool _stop;
     private volatile bool _publishRequested;
     private volatile bool _reportRequested;
@@ -123,6 +124,7 @@ public sealed class Monitor
         {
             StartOverlay();
         }
+        _contentTimer = SeasonFeatures.Start(this, _store, _config);
         RestartWatcher();
         ObsServer.Start(_config.ObsPort > 0 ? _config.ObsPort : ObsServer.DefaultPort);
 
@@ -145,6 +147,7 @@ public sealed class Monitor
 
     public void Stop()
     {
+        _contentTimer?.Dispose();
         ObsServer.Stop();
         _stop = true;
         _wake.Set();
@@ -189,6 +192,7 @@ public sealed class Monitor
     public void SetOverlayStyle(string style)
     {
         if (!NativeOverlay.Styles.Contains(style)) return;
+        ReportWriter.VisualStyle = style;
         Change(c => c.OverlayStyle = style);
         NativeOverlay.SetStyle(style);
     }
@@ -381,6 +385,12 @@ public sealed class Monitor
     }
 
     /// <summary>Pide al hilo de vigilancia que publique el estado (se hace en cuanto puede).</summary>
+    public void RefreshReport()
+    {
+        _reportRequested = true;
+        RequestPublish();
+    }
+
     public void RequestPublish()
     {
         _publishRequested = true;

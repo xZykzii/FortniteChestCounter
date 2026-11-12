@@ -86,6 +86,13 @@ public class NetBitReader : BitReader
             }
         }
 
+        // ChestCounter patch: physics actors (vehicles) end with a few flag bits this reader does not know (3 in
+        // Fortnite 43). Left unread, the property was flagged incompatible and every later movement was dropped.
+        if (!IsError && GetBitsLeft() is > 0 and <= 8)
+        {
+            SkipBits(GetBitsLeft());
+        }
+
         return repMovement;
     }
 

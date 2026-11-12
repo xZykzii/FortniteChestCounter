@@ -244,10 +244,20 @@ public sealed class Tracker
 
         record.ReplayFile = file.Name;
 
-        if (!record.IsBattleRoyale)
+        var existing = _data.Matches.FirstOrDefault(m => m.SessionId == record.SessionId);
+        if (existing != null && existing.AnalyzerVersion >= record.AnalyzerVersion)
+        {
+            _data.ProcessedFiles[key] = record.SessionId;
+            _store.SaveData(_data);
+            return new Outcome(Skipped: L.T("partida ya contada (misma partida, archivo renombrado)",
+                "match already counted (same match, renamed file)"));
+        }
+
+
+        if (!record.IsBattleRoyale || (_config.SeasonBattleRoyaleOnly && !GameModes.Counts(record)))
         {
             // Also drop a record left by an older version of the tool for this replay.
-            _data.Matches.RemoveAll(m => m.SessionId == record.SessionId);
+            // Historical records remain in the ledger.
             _data.ProcessedFiles[key] = "other mode";
             _store.SaveData(_data);
             return new Outcome(Skipped: L.T("no es una partida Battle Royale (creativo / otro modo)",
@@ -256,20 +266,11 @@ public sealed class Tracker
 
         if (!Profiles.IsSupportedVersion(record))
         {
-            _data.Matches.RemoveAll(m => m.SessionId == record.SessionId);
+            // Historical records remain in the ledger.
             _data.ProcessedFiles[key] = "older version";
             _store.SaveData(_data);
             return new Outcome(Skipped: L.T("versión anterior a v43 (Capítulo 7 Mini Temporada)",
                 "version prior to v43 (Chapter 7 Mini Season)"));
-        }
-
-        var existing = _data.Matches.FirstOrDefault(m => m.SessionId == record.SessionId);
-        if (existing != null && existing.AnalyzerVersion >= record.AnalyzerVersion)
-        {
-            _data.ProcessedFiles[key] = record.SessionId;
-            _store.SaveData(_data);
-            return new Outcome(Skipped: L.T("partida ya contada (misma partida, archivo renombrado)",
-                "match already counted (same match, renamed file)"));
         }
 
         if (existing != null)

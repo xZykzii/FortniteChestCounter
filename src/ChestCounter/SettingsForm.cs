@@ -86,6 +86,10 @@ public sealed class SettingsForm : Form
             value => { if (!_monitor.SetStartWithFortnite(value)) throw new IOException("No se pudo guardar el inicio."); });
         y = Toggle(page, "Abrir el informe al iniciar", "Usa tu navegador predeterminado", y, _monitor.Config.OpenReportOnStart,
             value => _monitor.Change(c => c.OpenReportOnStart = value));
+        y = Toggle(page, "Minimizar a la bandeja", "El icono permite volver a abrir la ventana", y, _monitor.Config.MinimizeToTray,
+            value => _monitor.Change(c => c.MinimizeToTray = value));
+        y = Toggle(page, "BR normal de la temporada", "Solo para partidas nuevas; conserva las guardadas", y, _monitor.Config.SeasonBattleRoyaleOnly,
+            value => _monitor.Change(c => c.SeasonBattleRoyaleOnly = value));
         y = Heading(page, "Equipo y conteo", "Los compañeros son un mínimo observado", y + 20);
         y = Toggle(page, "Mostrar compañeros", "Incluye el desglose y el ranking", y, _monitor.Config.ShowTeammates, _monitor.SetShowTeammates);
         y = Toggle(page, "Sumar cofres del equipo", "Puedes alternarlo con E en la ventana", y, _monitor.Config.CountTeammateChests, _monitor.SetCountTeammates);
@@ -156,6 +160,9 @@ public sealed class SettingsForm : Form
         page.Controls.Add(initial);
         initial.ValueChanged += (_, _) => _monitor.SetInitialChests((int)initial.Value);
         y += ROW_HEIGHT;
+        var estimate = Branding.Button(page, "Estimar desde Carrera…", () => AppExperience.EstimateCareer(this, _monitor, _store));
+        estimate.SetBounds(0, y, 300, 40);
+        y += ROW_HEIGHT;
         TextAt(page, "Mostrar partidas desde", 10, 0, y, 280, 28);
         var from = new DateTimePicker { ShowCheckBox = true, Format = DateTimePickerFormat.Short,
             Location = new Point(280, y), Width = 228, Checked = _monitor.Config.CountFrom.HasValue,
@@ -170,8 +177,11 @@ public sealed class SettingsForm : Form
         var open = Branding.Button(page, "Abrir carpeta de datos", () => Branding.Open(_store.Folder));
         open.SetBounds(0, y, 244, 40);
         y = Heading(page, "Actualizaciones", "Edición personal: actualización manual para conservar tus cambios", y + 64);
-        TextAt(page, "Antes de cada actualización se guarda un respaldo", 10, 0, y, CONTENT_WIDTH, 40, Theme.Muted);
-        y += 64;
+        y = Toggle(page, "Actualizar catálogo del evento", "Descarga datos e imágenes; nunca ejecutables", y, _monitor.Config.ContentUpdates,
+            value => _monitor.Change(c => c.ContentUpdates = value));
+        var help = Branding.Button(page, "Ayuda y desinstalación", () => AppExperience.Help(this));
+        help.SetBounds(0, y + 16, 300, 40);
+        y += 80;
         var reset = Branding.Button(page, "Restablecer estadísticas…", Reset);
         reset.ForeColor = Theme.Coral;
         reset.SetBounds(0, y, 256, 40);

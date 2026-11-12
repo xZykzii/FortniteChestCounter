@@ -363,6 +363,19 @@ public abstract class ReplayReader<T> where T : Replay, new()
                 // Checkpoints are used for fast forwarding,
                 // we dont need it unless we want to process small parts of replay files.
                 //ReadCheckpoint(archive);
+
+                // ChestCounter patch: only the list of level placed actors destroyed so far is read (see below).
+                if (ReadCheckpointDeletedActors)
+                {
+                    try
+                    {
+                        ReadCheckpointDeletedStartupActors(archive);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning("Checkpoint at offset {offset}: deleted startup actors not read: {message}", offset, ex.Message);
+                    }
+                }
             }
 
             else if (chunkType == ReplayChunkType.Event)
@@ -392,6 +405,53 @@ public abstract class ReplayReader<T> where T : Replay, new()
         }
     }
 
+
+    /// <summary>ChestCounter patch: set to read the deleted startup actors of every checkpoint (off by default).</summary>
+    protected bool ReadCheckpointDeletedActors { get; set; }
+
+    /// <summary>
+    /// ChestCounter patch: reads the head of a checkpoint only: the level placed ("startup") actors the recording
+    /// client knows as destroyed. With delta checkpoints (Fortnite) the list holds those destroyed since the previous
+    /// checkpoint. The rest of the checkpoint (a full snapshot, used to seek in the replay) is skipped.
+    /// </summary>
+    private void ReadCheckpointDeletedStartupActors(FArchive archive)
+    {
+        var id = archive.ReadFString();
+        var group = archive.ReadFString();
+        var metadata = archive.ReadFString();
+        var startTime = archive.ReadUInt32();
+        var endTime = archive.ReadUInt32();
+        var sizeInBytes = archive.ReadInt32();
+
+        using var decrypted = DecryptBuffer(archive, sizeInBytes);
+        using var binaryArchive = Decompress(decrypted);
+
+        if (binaryArchive.HasDeltaCheckpoints())
+        {
+            binaryArchive.ReadUInt32(); // checkpoint size
+        }
+        if (binaryArchive.HasLevelStreamingFixes())
+        {
+            binaryArchive.ReadInt64(); // packet offset
+        }
+        if (binaryArchive.NetworkVersion >= NetworkVersionHistory.HISTORY_MULTIPLE_LEVELS)
+        {
+            binaryArchive.ReadInt32(); // level for checkpoint
+        }
+        if (binaryArchive.NetworkVersion >= NetworkVersionHistory.HISTORY_DELETED_STARTUP_ACTORS)
+        {
+            var deleted = binaryArchive.ReadArray(binaryArchive.ReadFString);
+            if (!binaryArchive.IsError)
+            {
+                OnCheckpointDeletedStartupActors(startTime / 1000f, deleted, binaryArchive.HasDeltaCheckpoints());
+            }
+        }
+    }
+
+    /// <summary>ChestCounter patch: level placed actors destroyed, as listed by a checkpoint taken at <paramref name="time"/>.</summary>
+    protected virtual void OnCheckpointDeletedStartupActors(float time, string[] actors, bool delta)
+    {
+    }
 
     /// <summary>
     /// see https://github.com/EpicGames/UnrealEngine/blob/70bc980c6361d9a7d23f6d23ffe322a2d6ef16fb/Engine/Source/Runtime/NetworkReplayStreaming/LocalFileNetworkReplayStreaming/Private/LocalFileNetworkReplayStreaming.cpp#L318
@@ -1210,8 +1270,14 @@ public abstract class ReplayReader<T> where T : Replay, new()
         {
             //ConditionalCleanUp(false, Bunch.CloseReason);
             // lots of stuff is happening here, but maybe this is enough... :)
+            // ChestCounter patch: the actor was read after the channel was cleared (always null), and the close reason was lost.
+            var closing = Channels[bunch.ChIndex];
+            if (closing != null)
+            {
+                OnChannelClosing(bunch.ChIndex, closing, bunch.CloseReason);
+            }
             Channels[bunch.ChIndex] = null;
-            OnChannelClosed(bunch.ChIndex, Channels[bunch.ChIndex]?.Actor?.ActorNetGUID);
+            OnChannelClosed(bunch.ChIndex, closing?.Actor?.ActorNetGUID);
             return true;
         }
 
@@ -2443,6 +2509,14 @@ public abstract class ReplayReader<T> where T : Replay, new()
     protected virtual void OnChannelClosed(uint channelIndex, NetworkGUID? actor)
     {
 
+    }
+
+    /// <summary>
+    /// ChestCounter patch: called just before a channel is closed, with the channel (its actor is still known) and the
+    /// reason given by the server (actor destroyed, gone dormant, no longer relevant...).
+    /// </summary>
+    protected virtual void OnChannelClosing(uint channelIndex, UChannel channel, ChannelCloseReason reason)
+    {
     }
 
     /// <summary>

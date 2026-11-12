@@ -125,7 +125,8 @@ internal static class Program
             }
             else
             {
-                MessageBox.Show(alreadyOpen, "ChestCounter", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (!AppExperience.ActivateExisting(dataDir))
+                    MessageBox.Show(alreadyOpen, "ChestCounter", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             return 0;
         }
@@ -135,6 +136,7 @@ internal static class Program
         var config = reset ? null : store.LoadConfig();
         var firstRun = config == null;
         config ??= new Config();
+        SeasonFeatures.Initialize(store);
         L.Use(config.Language); // idioma elegido en Ajustes; sin elegir, el de Windows
 
         if (demosArg != null) config.DemosFolder = demosArg;
@@ -247,6 +249,7 @@ internal static class Program
         }
 
         var form = new MainForm(monitor, store);
+        using var experience = new AppExperience(form, monitor, store);
         monitor.CloseRequested += () =>
         {
             try { form.BeginInvoke(new Action(form.Close)); }

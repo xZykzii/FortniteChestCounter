@@ -15,12 +15,10 @@ public sealed class MainForm : Form
     private readonly Label _matches, _average, _best, _treasures, _chartNote, _result, _today, _notice;
     private readonly Label _teamTitle, _teamTotal;
     private readonly Label[] _names = new Label[TEAM_COLUMNS], _counts = new Label[TEAM_COLUMNS];
-    private readonly ComboBox _profiles;
+    private readonly ProfileSelector _profiles;
     private readonly PillButton _mode, _overlay;
     private readonly DailyChart _chart;
     private readonly Card _team;
-    private bool _isUpdatingProfile;
-    private string? _profileSignature;
 
     public MainForm(Monitor monitor, Store store)
     {
@@ -62,7 +60,7 @@ public sealed class MainForm : Form
         Controls.Add(_page);
     }
 
-    private ComboBox BuildHeader()
+    private ProfileSelector BuildHeader()
     {
         var header = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
         _page.Controls.Add(header, 0, 0);
@@ -70,12 +68,10 @@ public sealed class MainForm : Form
         title.SetBounds(0, 0, 360, 32);
         var subtitle = Branding.Label(header, "Tu registro de partidas en Fortnite", 10, Theme.Muted);
         subtitle.SetBounds(0, 32, 360, 20);
-        var profiles = Branding.Select(header, new Point(512, 10), 336);
+        var profiles = new ProfileSelector { Location = new Point(512, 0), Width = 336 };
+        header.Controls.Add(profiles);
         header.Resize += (_, _) => profiles.Left = header.Width - profiles.Width;
-        profiles.SelectedIndexChanged += (_, _) =>
-        {
-            if (!_isUpdatingProfile && profiles.SelectedItem is ProfileChoice item) _monitor.SetProfile(item.Key);
-        };
+        profiles.ProfileSelected += key => _monitor.SetProfile(key);
         return profiles;
     }
 
@@ -243,17 +239,7 @@ public sealed class MainForm : Form
 
     private void RenderProfiles(MonitorState state)
     {
-        var signature = string.Join("|", state.Profiles.Select(p => $"{p.Key}:{p.Matches}:{p.Chests}"));
-        _isUpdatingProfile = true;
-        if (_profileSignature != signature)
-        {
-            _profiles.Items.Clear();
-            foreach (var profile in state.Profiles) _profiles.Items.Add(new ProfileChoice(profile.Key, $"{profile.Name} · {profile.Matches} partidas"));
-            _profileSignature = signature;
-        }
-        for (var i = 0; i < _profiles.Items.Count; i++)
-            if (_profiles.Items[i] is ProfileChoice item && item.Key == state.CurrentKey) _profiles.SelectedIndex = i;
-        _isUpdatingProfile = false;
+        _profiles.SetProfiles(state.Profiles, state.CurrentKey);
     }
 
     private void RenderTeam(TeamSummary? team)
@@ -273,5 +259,4 @@ public sealed class MainForm : Form
         }
     }
 
-    private sealed record ProfileChoice(string Key, string Label) { public override string ToString() => Label; }
 }

@@ -77,6 +77,16 @@ public sealed class MatchRecord
     public int? Placement { get; set; }
     public int? TotalPlayers { get; set; }
     public int? Eliminations { get; set; }
+    public string? Map { get; set; }
+    public bool IsCustomMatch { get; set; }
+    public List<SeenPrize> SeenPrizes { get; set; } = new();
+    public List<TeamChestCount> TeamChests { get; set; } = new();
+    public int TeamChestsOpened { get; set; }
+    public int VehicleSeconds { get; set; }
+    public int VehicleMeters { get; set; }
+    public int UnrecordedVehicleLoot { get; set; }
+    private const int MISSING_VEHICLE_PILES = 3;
+    [JsonIgnore] public bool HasVehicleChestsMissing => UnrecordedVehicleLoot >= MISSING_VEHICLE_PILES;
     public int ChestsOpened { get; set; }
     public int AmmoBoxesOpened { get; set; }
     public int OtherContainersOpened { get; set; }
@@ -145,6 +155,9 @@ public sealed class Config
     /// <summary>Selected profile (Epic id or name of the account the player plays on); null = most recent one.</summary>
     public string? Profile { get; set; }
     public int CombinedFormat { get; set; }
+    public bool MinimizeToTray { get; set; }
+    public bool SeasonBattleRoyaleOnly { get; set; } = true;
+    public bool ContentUpdates { get; set; } = true;
     public string OverlayStyle { get; set; } = "hud";
     public int OverlaySize { get; set; } = 100;
     public int OverlayOpacity { get; set; } = 100;

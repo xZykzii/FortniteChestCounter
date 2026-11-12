@@ -94,8 +94,11 @@ public static class ReportWriter
 
     private static CultureInfo Loc => L.Culture;
 
+    public static string VisualStyle { get; set; } = "classic";
+
     public static void WriteAll(Store store, Config config, TrackerData data)
     {
+        VisualStyle = config.OverlayStyle;
         try
         {
             var view = Profiles.View(data, config);
@@ -410,6 +413,7 @@ public static class ReportWriter
         {
             tabs.Add(("companeros", L.T("Compañeros", "Teammates"), mates.Value.Count > 0 ? N(mates.Value.Count) : null));
         }
+        tabs.AddRange(new[] { ("probabilidades", "Probabilidades", (string?)null), ("coleccion", "Colección", (string?)null), ("eventos", "Eventos", (string?)null) });
         sb.Append($"""<nav class="tabs" role="tablist" aria-label="{L.T("Secciones del informe", "Report sections")}">""");
         foreach (var (id, label, count) in tabs)
         {
@@ -632,6 +636,7 @@ public static class ReportWriter
             sb.Append($"""<div class="panel" id="t-companeros" role="tabpanel" aria-labelledby="tab-companeros">{mates.Value.Html}</div>""");
         }
 
+        sb.Append(SeasonFeatures.Panels(data, config, initialChests));
         var footer = L.Big("footer",
             """
             <footer><h3>Cómo se cuenta</h3>
@@ -952,6 +957,7 @@ public static class ReportWriter
         .stats{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #222938;padding-top:7px}
         .stat .cap{font-size:10px}.stat b{display:block;font-size:16px;font-weight:700}
         .stat.t b{color:#ff80aa}.stat small{display:block;font-size:11px;font-weight:600;color:#7a8496}
+        .box.hud{background:transparent;border:0;padding:0;border-radius:0;text-shadow:2px 2px 2px #000}.hud .head{display:none}.hud .main{display:block}.hud .total{flex-wrap:nowrap}.hud .total .cap{display:none}.hud .chip{display:none}.hud .stats{border:0;background:transparent}.hud .stat{background:transparent}.hud .total img{width:48px;height:48px}
         .big,.stat b{font-family:'Barlow Condensed',sans-serif;font-weight:700}
         """;
 
@@ -966,7 +972,7 @@ public static class ReportWriter
         var badge = v.Badge != null ? $"<span class=\"pill\">{H(v.Badge.TrimStart('●', ' '))}</span>" : "";
         var chip = v.Current == null ? "none" : v.CurrentLive ? "live" : "";
         return $"""
-            <div class="box{(v.CurrentLive ? " live" : "")}">
+            <div class="box{(VisualStyle == "hud" ? " hud" : "")}{(v.CurrentLive ? " live" : "")}">
             <div class="head"><span>{L.T("Cofres", "Chests")}</span>{badge}</div>
             <div class="main">
               <div class="total">{Branding.ChestHtml}<span class="big">{H(v.Total)}</span><span class="cap">{H(v.TotalCaption)}</span></div>

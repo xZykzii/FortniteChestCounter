@@ -9,12 +9,18 @@ Contador de cofres para Windows con historial por perfil, informe de partidas, c
 ## Qué incluye
 
 - Total personal y personal + compañeros observados, con selector visible y atajo **E** en la ventana.
+- Selector de perfiles propio: botón oscuro, nombre, partidas y menú accesible con teclado.
 - Historial por cuenta, estadísticas diarias, media, récords, eliminaciones y tesoros.
 - Informe con pestañas y ranking de compañeros. Los cofres del equipo son un mínimo parcial según lo que contiene tu replay.
 - HUD transparente y overlay clásico; el cofre tiene transparencia real. Ctrl+Mayús+O muestra/oculta y Ctrl+Mayús+L bloquea la posición.
 - Overlay para OBS en `http://localhost:7373/` mientras el contador está abierto.
 - Compatibilidad con los historiales antiguos de ambas bases y registros manuales de otro PC, conservando los conteos personales.
-- Actualización manual para evitar que otro ejecutable sobrescriba esta edición.
+- Colección de premios, probabilidades por cofre, horarios locales de Treasure Hours y catálogo validado con imágenes incluidas para uso sin conexión.
+- Avisos de posible subconteo al usar vehículos y detección de cofres destruidos al romper su soporte.
+- Filtro opcional de BR normal de la temporada para partidas nuevas; conserva todas las partidas históricas.
+- Bandeja del sistema, recuperación de la ventana al abrir otra instancia, confirmación de cierre, ayuda y estimación opcional desde Carrera.
+- OBS refleja HUD o clásico según el estilo elegido.
+- Actualización del ejecutable manual; el catálogo se puede actualizar desde este repositorio, sin enviar tus partidas.
 
 ![Informe con datos ficticios de demostración](docs/report.png)
 
@@ -37,7 +43,7 @@ Los datos se guardan en `%APPDATA%\ChestCounter`. **No están incluidos en este 
 - `treasures.json`: nombres de premios.
 - `backup-before-combined`: copia anterior a la primera migración.
 
-Haz copia de estos archivos antes de cambiar de versión o de PC. Si importas repeticiones que ya están incluidas en un total manual, concilia ese registro para no sumar ambos. La migración conserva el historial; no inventa fechas, tesoros ni partidas individuales para los registros manuales.
+Haz copia de estos archivos antes de cambiar de versión o de PC. Si importas repeticiones que ya están incluidas en un total manual, concilia ese registro para no sumar ambos. Las mejoras del analizador se aplican a las partidas nuevas; esta edición mantiene el formato 17 y no fuerza el reanálisis del historial. La migración conserva el historial; no inventa fechas, tesoros ni partidas individuales para los registros manuales.
 
 ## Compilar
 
@@ -63,8 +69,10 @@ Usa una carpeta de prueba nueva. Las comprobaciones verifican preservación de c
 
 ## Procedencia y licencias
 
-Esta edición integra y modifica dos proyectos: [LED-N/Fortnite-ChestCounter v1.4.0](https://github.com/LED-N/Fortnite-ChestCounter/tree/v1.4.0) y [xdoofy92/ChestCounter v2.0.24](https://github.com/xdoofy92/ChestCounter/tree/v2.0.24). El analizador se basa en [FortniteReplayDecompressor de Shiqan](https://github.com/Shiqan/FortniteReplayDecompressor).
+Esta edición integra y modifica dos proyectos: [LED-N/Fortnite-ChestCounter v1.5.0](https://github.com/LED-N/Fortnite-ChestCounter/tree/v1.5.0) y [xdoofy92/ChestCounter v2.0.24](https://github.com/xdoofy92/ChestCounter/tree/v2.0.24). El analizador se basa en [FortniteReplayDecompressor de Shiqan](https://github.com/Shiqan/FortniteReplayDecompressor).
 
 El rediseño siguió las pautas de [unslop de Damir Sokolovsky](https://github.com/heydamir/unslop), licenciadas bajo CC BY 4.0. Se aplicaron espaciado consistente, superficies neutras, un único acento, tipografía legible y contenido visual del producto.
+
+Las marcas manuales de colección se guardan por perfil en el navegador, separadas del historial. Las probabilidades son estimaciones del catálogo original, no garantías; las franjas no confirmadas se muestran como previstas.
 
 Código bajo MIT; Barlow Condensed bajo OFL. El cofre de Fortnite y las marcas de Epic Games quedan fuera de la licencia MIT de este código. Proyecto independiente, sin afiliación ni respaldo de Epic Games. Más detalles en [CREDITS.md](CREDITS.md).

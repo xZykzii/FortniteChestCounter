@@ -5,17 +5,18 @@ using Unreal.Core.Models.Enums;
 
 namespace FortniteReplayReader.Models.NetFieldExports.Vehicles;
 
-[NetFieldExportGroup("/Script/FortniteGame.FortVehicleSeatComponent", minimalParseMode: ParseMode.Ignore)]
+/// <summary>
+/// ChestCounter patch: who sits in a vehicle. <see cref="PlayerSlots"/> has one element per seat (0 = driver), each
+/// with the pawn in <see cref="Player"/> (0 when the seat is empty); only the seats that changed are sent.
+/// </summary>
+[NetFieldExportGroup("/Script/FortniteGame.FortVehicleSeatComponent", minimalParseMode: ParseMode.Minimal)]
 public class SeatComponent : INetFieldExportGroup
 {
-    [NetFieldExport("PlayerSlots", RepLayoutCmdType.Property)]
-    public DebuggingObject PlayerSlots { get; set; }
+    [NetFieldExport("PlayerSlots", RepLayoutCmdType.DynamicArray)]
+    public SeatComponent[] PlayerSlots { get; set; }
 
-    [NetFieldExport("PlayerEntryTime", RepLayoutCmdType.Property)]
-    public DebuggingObject PlayerEntryTime { get; set; }
-
-    [NetFieldExport("WeaponComponent", RepLayoutCmdType.Property)]
-    public DebuggingObject WeaponComponent { get; set; }
+    [NetFieldExport("player", RepLayoutCmdType.PropertyObject)]
+    public uint? Player { get; set; }
 }
 
 [NetFieldExportGroup("/Script/FortniteGame.FortVehicleSeatWeaponComponent", minimalParseMode: ParseMode.Ignore)]
